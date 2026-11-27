@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { createCompilerExplorerClient } from './compiler-explorer.mjs'
+import { createCompilerExplorerClient, parseShortlinkSession } from './compiler-explorer.mjs'
 import { reverifyIssue } from './reverify-issue.mjs'
 
 const repro = {
@@ -30,6 +30,67 @@ const entry = {
   },
 }
 const verifiedAt = '2026-11-27T00:00:00Z'
+
+const editor = {
+  id: 1,
+  language: 'c++',
+  source: 'int x;\n',
+  compilers: [{ id: 'clang_assertions_trunk', options: '-std=c++20 -DVALUE="two words"' }],
+}
+
+test('fetches normalized shortlinks with the shared transport and request budget', async () => {
+  const paths = []
+  const client = createCompilerExplorerClient({
+    requestBudget: 2,
+    async fetchImpl(url, request) {
+      assert.equal(url.origin, 'https://godbolt.org')
+      assert.equal(request.method, 'GET')
+      assert.equal(request.headers.Accept, 'application/json')
+      paths.push(url.pathname)
+      return Response.json(
+        url.pathname.startsWith('/api/compilers') ? catalog : { sessions: [editor] },
+      )
+    },
+  })
+  await assert.rejects(client.fetchShortlink('../compilers'), TypeError)
+  assert.deepEqual(await client.fetchShortlink('abc_123'), {
+    sourceCode: editor.source,
+    compileArgs: ['-std=c++20', '-DVALUE=two words'],
+    compilerId: 'clang_assertions_trunk',
+    language: 'c++',
+  })
+  await client.listCompilers()
+  await assert.rejects(client.compile(compile), { code: 'budget' })
+  await assert.rejects(client.fetchShortlink('another'), { code: 'budget' })
+  assert.deepEqual(paths, ['/api/shortlinkinfo/abc_123', '/api/compilers/c%2B%2B'])
+})
+
+test('parses single-file C with no options and ignores empty editors', () => {
+  const cEditor = { ...editor, language: 'c', compilers: [{ id: 'cclang2210', options: '' }] }
+  assert.deepEqual(parseShortlinkSession({ sessions: [{ source: '  ' }, cEditor], trees: [] }), {
+    sourceCode: cEditor.source,
+    compileArgs: [],
+    compilerId: 'cclang2210',
+    language: 'c',
+  })
+})
+
+test('declines ambiguous or unsupported shortlink sessions', () => {
+  for (const state of [
+    { sessions: [editor, { ...editor, id: 2 }] },
+    { sessions: [{ ...editor, language: 'rust' }] },
+    { sessions: [editor], trees: [{}] },
+    { sessions: [{ ...editor, compilers: [null, { id: 'g82', options: '' }] }] },
+    { sessions: [{ ...editor, compilers: [{ id: 'clang_trunk', options: '"unterminated' }] }] },
+    {
+      sessions: [
+        { ...editor, compilers: [{ id: 'clang_trunk', options: '', libs: [{ id: 'fmt' }] }] },
+      ],
+    },
+  ]) {
+    assert.equal(parseShortlinkSession(state), null)
+  }
+})
 
 test('fetches observed compiler versions and sends lossless compile-only arguments', async () => {
   const requests = []
@@ -115,6 +176,8 @@ test('bounds both the transport and JSON body with an abortable timeout', async 
       },
     })
     await assert.rejects(client.compile(compile), { code: 'timeout' })
+    assert.equal(requestSignal.aborted, true)
+    await assert.rejects(client.fetchShortlink('abc123'), { code: 'timeout' })
     assert.equal(requestSignal.aborted, true)
   }
 })

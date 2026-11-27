@@ -4,7 +4,11 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
 import { buildSnapshot } from './build-snapshot.mjs'
-import { CompilerExplorerError, createCompilerExplorerClient } from './compiler-explorer.mjs'
+import {
+  CompilerExplorerError,
+  compilerExplorerShortId,
+  createCompilerExplorerClient,
+} from './compiler-explorer.mjs'
 import { selectClangCompilers } from './compiler-selection.mjs'
 import { createGitHubCollector, defaultGitHubOptions } from './github-collector.mjs'
 import { verifyIssue } from './issue-verification.mjs'
@@ -44,9 +48,32 @@ function canVerify(issue) {
       repro.sourceCode &&
       repro.expectedBehavior &&
       supportsCompileArgs(repro.compileArgs) &&
-      expectations.reported.diagnosticIncludes &&
+      (expectations.reported.diagnosticIncludes || expectations.reported.crash === true) &&
       Object.keys(expectations.expected).length > 0,
   )
+}
+
+async function hydrateFromShortlink(issue, client) {
+  const { repro } = issue
+  if (repro.sourceCode && repro.compileArgs != null) return issue
+  const ids = new Set(
+    (repro.reporterGodboltUrls ?? []).map(compilerExplorerShortId).filter(Boolean),
+  )
+  if (ids.size !== 1) return issue
+  const [shortId] = ids
+  const session = await client.fetchShortlink(shortId)
+  if (!session || (issue.language && issue.language !== session.language)) return issue
+  return {
+    ...issue,
+    language: session.language,
+    reportedCompilerId: session.compilerId,
+    repro: {
+      ...repro,
+      sourceCode: repro.sourceCode || session.sourceCode,
+      compileArgs: repro.compileArgs ?? session.compileArgs,
+      sourceUrl: repro.sourceUrl ?? issue.url,
+    },
+  }
 }
 
 export async function prepareSnapshot({
@@ -90,12 +117,22 @@ export async function prepareSnapshot({
   const cppCatalog = await catalog('c++')
   const { trunk } = selectClangCompilers(cppCatalog ?? [], { trunkId })
   const candidates = []
-  for (const issue of observations.issues) {
+  for (const rawIssue of observations.issues) {
+    let issue = rawIssue
+    let shortlinkUnavailable = false
+    try {
+      issue = await hydrateFromShortlink(rawIssue, client)
+    } catch (error) {
+      if (!(error instanceof CompilerExplorerError)) throw error
+      shortlinkUnavailable = true
+      warnings.push(`Issue #${issue.id} shortlink: ${error.message}`)
+    }
     const eligible = canVerify(issue)
     const available = eligible ? await catalog(issue.language) : []
     const resolved = selectClangCompilers(available ?? [], {
       language: issue.language,
       declaredVersion: issue.declaredVersion,
+      reportedCompilerId: issue.reportedCompilerId,
       baselineId: issue.language === 'c' ? cBaselineId : baselineId,
       trunkId: issue.language === 'c' ? cTrunkId : trunkId,
     })
@@ -117,9 +154,9 @@ export async function prepareSnapshot({
       issues[issue.id] = previous
       continue
     }
-    // A catalog outage should not evict evidence that can be reused when it returns.
+    // Temporary service failures should preserve evidence for the next sync.
     issues[issue.id] =
-      available === null && previous
+      (available === null || shortlinkUnavailable) && previous
         ? previous
         : { digest, lastAttemptAt: previous?.lastAttemptAt ?? null }
     candidates.push({
@@ -221,6 +258,7 @@ async function main() {
   })
   const repository = process.env.UPSTREAM_GITHUB_REPOSITORY || defaultGitHubOptions.repository
   const maxReverify = integer('MAX_REVERIFY_PER_RUN', defaultMaxReverify)
+  const maxIssues = integer('GITHUB_MAX_ISSUES', defaultGitHubOptions.maxIssues)
   const now = new Date().toISOString()
   const labels = (process.env.GITHUB_MODULE_LABELS || '')
     .split(',')
@@ -233,14 +271,14 @@ async function main() {
     labels: labels.length ? labels : defaultGitHubOptions.labels,
     maxPages: integer('GITHUB_MAX_PAGES', defaultGitHubOptions.maxPages),
     maxPulls: integer('GITHUB_MAX_PRS', defaultGitHubOptions.maxPulls),
-    maxIssues: integer('GITHUB_MAX_ISSUES', defaultGitHubOptions.maxIssues),
+    maxIssues,
     maxHistory: integer('GITHUB_MAX_HISTORY', defaultGitHubOptions.maxHistory),
     timeoutMs: integer('GITHUB_TIMEOUT_MS', defaultGitHubOptions.timeoutMs),
     requestBudget: integer('GITHUB_REQUEST_BUDGET', defaultGitHubOptions.requestBudget),
   })
   const client = createCompilerExplorerClient({
     timeoutMs: integer('COMPILER_EXPLORER_TIMEOUT_MS', 15_000),
-    requestBudget: integer('COMPILER_EXPLORER_REQUEST_BUDGET', 2 + 2 * maxReverify),
+    requestBudget: integer('COMPILER_EXPLORER_REQUEST_BUDGET', 2 + maxIssues + 2 * maxReverify),
   })
   const { input, state, attempted, queued, warnings } = await prepareSnapshot({
     collector,

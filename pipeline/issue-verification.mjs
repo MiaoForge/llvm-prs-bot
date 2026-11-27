@@ -10,12 +10,15 @@ export function extractCrashSignature(diagnostics) {
   // Prefer a specific assertion or fatal diagnostic to a generic crash banner.
   return (
     lines.find((line) =>
-      /\b(assertion\b.*\bfailed|LLVM ERROR:|fatal error: error in backend:)/i.test(line),
+      /\b(assertion\b.*\bfailed|assertion failure|LLVM ERROR:|fatal error: error in backend:)/i.test(
+        line,
+      ),
     ) ??
     lines.find(
       (line) =>
-        /\b(segmentation fault|internal compiler error|SIG(?:ABRT|SEGV|ILL|BUS))\b/i.test(line) ||
-        /PLEASE submit a bug report|clang frontend command failed due to signal/i.test(line),
+        /\b(segmentation fault|stack overflow|internal compiler error|SIG(?:ABRT|SEGV|ILL|BUS))\b/i.test(
+          line,
+        ) || /PLEASE submit a bug report|clang frontend command failed due to signal/i.test(line),
     ) ??
     null
   )
@@ -62,11 +65,8 @@ export function verifyIssue(record) {
   const trunk = record.runs?.trunk ?? null
   const reportedCrashSignature = kind === 'crash' ? (record.reportedCrashSignature ?? null) : null
   const crashSignature =
-    source === 'generated-by-fuzzer' && kind === 'crash'
-      ? ([baseline, trunk]
-          .filter((run) => run?.outcome === 'reported-symptom')
-          .map((run) => extractCrashSignature(run.diagnostics))
-          .find(Boolean) ?? reportedCrashSignature)
+    kind === 'crash' && baseline?.outcome === 'reported-symptom'
+      ? (extractCrashSignature(baseline.diagnostics) ?? reportedCrashSignature)
       : reportedCrashSignature
   const runs = { baseline, trunk }
   const fixAttribution = record.fixAttribution ?? { status: 'unknown' }
@@ -110,11 +110,13 @@ export function verifyIssue(record) {
 }
 
 export function matchRun(run, { reported = {}, expected = {} } = {}) {
-  // A nonzero exit code by itself cannot identify the reported symptom.
-  const reportedMatches =
-    Boolean(reported.diagnosticIncludes) &&
-    run.diagnostics.includes(reported.diagnosticIncludes) &&
-    (reported.exitCode === undefined || run.exitCode === reported.exitCode)
+  // The exit status alone cannot identify a reported symptom.
+  const signature = extractCrashSignature(run.diagnostics)
+  const reportedMatches = reported.diagnosticIncludes
+    ? run.diagnostics.includes(reported.diagnosticIncludes) &&
+      (reported.exitCode === undefined || run.exitCode === reported.exitCode)
+    : reported.crash === true && run.exitCode !== 0 && signature !== null
+  const hasReportedCheck = Boolean(reported.diagnosticIncludes || reported.crash === true)
   const hasExpectedCheck =
     Number.isInteger(expected.exitCode) ||
     Boolean(expected.diagnosticIncludes) ||
@@ -127,9 +129,9 @@ export function matchRun(run, { reported = {}, expected = {} } = {}) {
     (!expected.noCrash || [0, 1].includes(run.exitCode)) &&
     run.exitCode >= 0 &&
     run.exitCode < 128 &&
-    extractCrashSignature(run.diagnostics) === null
+    signature === null
   if (reportedMatches && expectedMatches) return 'unknown'
   if (reportedMatches) return 'reported-symptom'
   if (expectedMatches) return 'expected-behavior'
-  return reported.diagnosticIncludes && hasExpectedCheck ? 'different-behavior' : 'unknown'
+  return hasReportedCheck && hasExpectedCheck ? 'different-behavior' : 'unknown'
 }

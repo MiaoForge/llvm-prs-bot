@@ -36,7 +36,7 @@ and the same per-run budget applies.
 | `GITHUB_MAX_PAGES` / `GITHUB_MAX_PRS` / `GITHUB_MAX_ISSUES` / `GITHUB_MAX_HISTORY` | 3 / 25 / 30 / 6 |
 | `GITHUB_REQUEST_BUDGET` / `GITHUB_TIMEOUT_MS` | 400 / 15,000 |
 | `MAX_REVERIFY_PER_RUN` | 6 issue comparisons |
-| `COMPILER_EXPLORER_REQUEST_BUDGET` / `COMPILER_EXPLORER_TIMEOUT_MS` | Two catalog requests plus two requests per allowed issue / 15,000 |
+| `COMPILER_EXPLORER_REQUEST_BUDGET` / `COMPILER_EXPLORER_TIMEOUT_MS` | Two catalogs, up to one shortlink per collected issue, and two compiles per allowed recheck / 15,000 |
 | `CLANG_BASELINE_ID` / `CLANG_TRUNK_ID` | Latest stable Clang 22 for C++ / `clang_trunk` |
 | `CLANG_C_BASELINE_ID` / `CLANG_C_TRUNK_ID` | Latest stable Clang 22 for C / `cclang_trunk` |
 

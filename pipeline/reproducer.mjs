@@ -9,7 +9,7 @@ const languages = new Map([
 ])
 const fencePattern = /^ {0,3}(`{3,}|~{3,})[ \t]*([^\s`~]*)[^\n]*\n([\s\S]*?)^ {0,3}\1[ \t]*$/gm
 
-function words(command) {
+export function parseArgumentTokens(command) {
   const tokens = []
   let token = ''
   let quote = null
@@ -18,7 +18,10 @@ function words(command) {
     const char = command[index]
     if (char === '\\' && quote !== "'") {
       if (++index === command.length) return null
-      token += command[index]
+      const escaped = command[index]
+      if (escaped === '\n') continue
+      if (quote === '"' && !/["\\$`]/.test(escaped)) token += '\\'
+      token += escaped
     } else if (quote) {
       if (char === quote) quote = null
       else token += char
@@ -49,7 +52,9 @@ function invocation(line) {
   const clang = /^clang(?:\+\+)?(?:-\d+)?(?:\s+|$)/.exec(command)
   const flags = /^(?:flags|compile (?:flags|arguments)):\s*/i.exec(command)
   if (!clang && !flags) return null
-  const tokens = words(command.slice((clang ?? flags)[0].length).replace(/^`([^`]+)`$/, '$1'))
+  const tokens = parseArgumentTokens(
+    command.slice((clang ?? flags)[0].length).replace(/^`([^`]+)`$/, '$1'),
+  )
   if (tokens === null) return null
   if (flags) return tokens.length && tokens[0].startsWith('-') ? tokens : null
   // Only a single local input can be replaced by Compiler Explorer's source pane.
@@ -63,7 +68,7 @@ export function supportsCompileArgs(args) {
   return (
     Array.isArray(args) &&
     args.every((arg) =>
-      /^-(?:std=[\w+.-]+|O[0-3sgz]|g[0-3]?|W[\w=+-]+|[DU][A-Za-z_]\w*(?:=[^\r\n\0]*)?|fsyntax-only|f(?:no-)?(?:exceptions|rtti)|pedantic(?:-errors)?|pipe|c|S|(?:m32|m64))$/.test(
+      /^-(?:std=[\w+.-]+|O[0-3sgz]|g[0-3]?|W[\w=+-]+|[DU][A-Za-z_]\w*(?:=[^\r\n\0]*)?|fsyntax-only|ferror-limit=\d+|f(?:no-)?(?:exceptions|rtti)|pedantic(?:-errors)?|pipe|c|S|(?:m32|m64))$/.test(
         arg,
       ),
     )
@@ -154,10 +159,12 @@ export function extractReproducer(body = '', title = '') {
   const invocations = lines.map(invocation).filter((args) => args !== null)
   const distinctArgs = new Map(invocations.map((args) => [JSON.stringify(args), args]))
   const compileArgs = distinctArgs.size === 1 ? distinctArgs.values().next().value : null
-  const expectedBehavior = expectedText(lines)
-  const crashSignature = extractCrashSignature(prose) ?? extractCrashSignature(title)
+  const explicitExpected = expectedText(lines)
+  const crashSignature = extractCrashSignature(title) ?? extractCrashSignature(prose)
   const kind =
-    crashSignature || /\b(?:crash(?:es|ed)?|assertion)\b/i.test(title)
+    crashSignature ||
+    /\b(?:crash(?:es|ed)?|assertion|stack overflow)\b/i.test(title) ||
+    /\b(?:clang(?:\+\+)?|(?:the )?compiler) (?:crashes|crashed|segfaults|segfaulted)\b/i.test(prose)
       ? 'crash'
       : /(?:fatal )?error:\s*/i.test(prose) || /\bdiagnostic\b/i.test(title)
         ? 'diagnostic'
@@ -166,6 +173,10 @@ export function extractReproducer(body = '', title = '') {
     .exec(prose)?.[1]
     ?.trim()
   const reported = crashSignature ?? (kind === 'diagnostic' ? diagnostic : null)
+  const implicitNoCrash = kind === 'crash' && explicitExpected === null
+  const expectedBehavior =
+    explicitExpected ?? (implicitNoCrash ? 'The compiler should not crash.' : null)
+  const expected = expectedConditions(expectedBehavior, kind)
   const versions = declaredVersions(prose)
   const links = reporterGodboltUrls(markdown)
   return {
@@ -181,8 +192,13 @@ export function extractReproducer(body = '', title = '') {
       ...(links.length ? { reporterGodboltUrls: links } : {}),
     },
     expectations: {
-      reported: reported ? { diagnosticIncludes: reported } : {},
-      expected: expectedConditions(expectedBehavior, kind),
+      reported:
+        kind === 'crash' && (implicitNoCrash || !reported)
+          ? { crash: true }
+          : reported
+            ? { diagnosticIncludes: reported }
+            : {},
+      expected,
     },
   }
 }

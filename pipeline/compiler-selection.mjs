@@ -6,12 +6,23 @@ function versionParts(entry) {
 
 export function selectClangCompilers(
   catalog,
-  { language = 'c++', declaredVersion, baselineId, trunkId } = {},
+  { language = 'c++', declaredVersion, reportedCompilerId, baselineId, trunkId } = {},
 ) {
   const nativeRelease = language === 'c' ? /^cclang\d+$/ : /^clang\d+$/
+  const linkedRelease = language === 'c' ? /^cclang\d+(?:assert)?$/ : /^clang\d+(?:assert)?$/
   const nativeTrunk = language === 'c' ? 'cclang_trunk' : 'clang_trunk'
   const available = catalog.filter((entry) => typeof entry.version === 'string' && entry.version)
   const trunk = available.find((entry) => entry.id === (trunkId || nativeTrunk)) ?? null
+  if (!declaredVersion) {
+    const reported = available.find(
+      (entry) =>
+        entry.id === reportedCompilerId &&
+        linkedRelease.test(entry.id) &&
+        entry.releaseTrack === 'stable' &&
+        entry.compilerType === 'clang',
+    )
+    if (reported) return { baseline: reported, trunk }
+  }
   if (!declaredVersion && baselineId) {
     return { baseline: available.find((entry) => entry.id === baselineId) ?? null, trunk }
   }

@@ -14,6 +14,9 @@ const head = 'a'.repeat(40)
 const actor = { login: 'author', type: 'User' }
 const now = '2026-11-27T03:00:00.000Z'
 const html_url = 'https://github.example.invalid/llvm/project'
+const crashLink = 'https://compiler-explorer.com/z/crashFixture'
+const crashSource = 'int x;\n'
+const crashDiagnostic = "clang: fixture.cpp: Assertion 'fixture' failed."
 const response = (data) => Response.json(data)
 const release = (id, semver, releaseTrack = 'stable') => ({
   id,
@@ -24,6 +27,7 @@ const release = (id, semver, releaseTrack = 'stable') => ({
 })
 const catalog = [
   release('clang2110', '21.1.0'),
+  release('clang120assert', '12.0.0 (assertions)'),
   release('clang2210', '22.1.0'),
   release('clang2212', '22.1.2'),
   release('clang2220', '22.2.0', 'nightly'),
@@ -80,6 +84,8 @@ function transports({
   cIssue = false,
   coarseOnlyPr = false,
   expectedWarning = false,
+  crash,
+  requestBudget,
 } = {}) {
   const compilations = []
   const item = {
@@ -124,6 +130,15 @@ function transports({
         return new Response(null, { status: 401 })
       if (/\/issues\/[23]$/.test(path)) {
         const number = Number(path.at(-1))
+        if (crash) {
+          return response({
+            ...item,
+            number,
+            title: 'Clang Assertion failure while compiling',
+            body: crashLink,
+            labels: [...item.labels, { name: 'generated-by-fuzzer' }],
+          })
+        }
         const body = [
           number === 3 ? 'Clang 21.1.0' : 'Clang frontend',
           cIssue && number === 2 ? '```c' : '```cpp',
@@ -153,8 +168,21 @@ function transports({
     : catalog
   const client = createCompilerExplorerClient({
     baseUrl: 'https://ce.example.invalid/',
+    requestBudget,
     async fetchImpl(url, request) {
       assert.equal(url.origin, 'https://ce.example.invalid')
+      if (url.pathname === '/api/shortlinkinfo/crashFixture') {
+        assert.equal(request.method, 'GET')
+        const editor = {
+          language: 'c++',
+          source: crashSource,
+          compilers: [
+            { id: 'clang_assertions_trunk', options: '-std=c++20' },
+            ...(crash.release ? [{ id: 'clang120assert', options: '-ferror-limit=0' }] : []),
+          ],
+        }
+        return response({ sessions: crash.multiple ? [editor, editor] : [editor] })
+      }
       if (request.method === 'GET') {
         const entries = url.pathname.endsWith('/c') ? cCatalog : nextCatalog
         return unavailable ? new Response(null, { status: 503 }) : response(entries)
@@ -162,6 +190,19 @@ function transports({
       const id = url.pathname.split('/').at(-2)
       compilations.push(id)
       const trunk = id.endsWith('_trunk')
+      if (crash) {
+        const body = JSON.parse(request.body)
+        assert.equal(body.source, crashSource)
+        assert.deepEqual(body.options.userArguments, [
+          crash.release ? '-ferror-limit=0' : '-std=c++20',
+        ])
+        const crashed = !trunk || crash.trunkCrash
+        return response({
+          code: crashed ? 134 : 1,
+          stdout: [],
+          stderr: [{ text: crashed ? crashDiagnostic : 'fixture.cpp: error: invalid input' }],
+        })
+      }
       return response({
         code: trunk ? 0 : 1,
         stdout: [],
@@ -286,4 +327,39 @@ test('uses the C catalog and excludes unsupported expectations and broad-only PR
     warning.input.issues.find((issue) => issue.id === 2)?.conclusion,
     'insufficient-evidence',
   )
+})
+
+test('compares a fuzzer shortlink on the reported release or the Clang 22 baseline', async (context) => {
+  for (const [crash, baseline, conclusion] of [
+    [{ release: true }, 'clang120assert', 'close-candidate'],
+    [{ trunkCrash: true }, 'clang2212', 'still-reproducible'],
+  ]) {
+    const output = snapshotDirectory(context)
+    const result = await sync(output, 27, { crash, issueNumbers: [2], requestBudget: 4 })
+    assert.deepEqual(result.warnings, [])
+    assert.deepEqual(result.compilations, [baseline, 'clang_trunk'])
+    const [issue] = result.input.issues
+    assert.equal(issue.conclusion, conclusion)
+    assert.equal(issue.source, 'generated-by-fuzzer')
+    assert.equal(issue.crashSignature, crashDiagnostic)
+    assert.equal(issue.runs.baseline.outcome, 'reported-symptom')
+    assert.equal(issue.runs.baseline.godboltUrl, null)
+    assert.equal(issue.repro.expectedBehavior, 'The compiler should not crash.')
+    assert.equal(issue.repro.sourceUrl, html_url)
+    assert.deepEqual(issue.repro.reporterGodboltUrls, [crashLink])
+    assert.equal(validateSnapshot(output).issueTotal, 1)
+  }
+})
+
+test('retains shortlink provenance when the budget is exhausted or the session is unsupported', async (context) => {
+  const output = snapshotDirectory(context)
+  for (const config of [{ crash: {}, requestBudget: 1 }, { crash: { multiple: true } }]) {
+    const result = await sync(output, 27, { ...config, issueNumbers: [2] })
+    const [issue] = result.input.issues
+    assert.equal(issue.conclusion, 'insufficient-evidence')
+    assert.equal(issue.repro.sourceCode, null)
+    assert.deepEqual(issue.repro.reporterGodboltUrls, [crashLink])
+    assert.deepEqual(result.compilations, [])
+    if (config.requestBudget) assert.match(result.warnings[0], /shortlink: .*budget exhausted/)
+  }
 })

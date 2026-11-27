@@ -96,19 +96,32 @@ test('requires a crash signature for conclusive fuzzer crash comparisons', () =>
   assert.equal(extractCrashSignature(`PLEASE submit a bug report\n ${assertion}`), assertion)
 })
 
-test('retains a human-reported crash signature without requiring it for a conclusion', () => {
+test('prefers an observed baseline signature for human reports', () => {
   const runs = {
     baseline: run('reported-symptom', assertion, 134),
     trunk: run('expected-behavior', '', 0),
   }
-  const detail = issue({ kind: 'crash', reportedCrashSignature: assertion, runs })
+  const detail = issue({ kind: 'crash', reportedCrashSignature: 'Reported assertion', runs })
   assert.equal(detail.source, 'human-reported')
   assert.equal(detail.crashSignature, assertion)
   assert.equal(detail.conclusion, 'close-candidate')
   const withoutSignature = issue({ kind: 'crash', runs })
-  assert.equal(withoutSignature.crashSignature, null)
+  assert.equal(withoutSignature.crashSignature, assertion)
   assert.deepEqual(withoutSignature.missingEvidence, [])
   assert.equal(withoutSignature.conclusion, 'close-candidate')
+})
+
+test('distinguishes compiler crashes, normal diagnostics, and unexplained signal exits', () => {
+  const expectations = { reported: { crash: true }, expected: { noCrash: true } }
+  assert.equal(matchRun(run(null, assertion, 134), expectations), 'reported-symptom')
+  assert.equal(
+    matchRun(run(null, 'internal compiler error: fixture', 1), expectations),
+    'reported-symptom',
+  )
+  assert.equal(matchRun(run(null, diagnostic, 1), expectations), 'expected-behavior')
+  for (const exitCode of [-11, 139]) {
+    assert.equal(matchRun(run(null, '', exitCode), expectations), 'different-behavior')
+  }
 })
 
 test('keeps fix attribution independent of the version comparison', () => {

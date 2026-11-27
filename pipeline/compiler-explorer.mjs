@@ -1,5 +1,57 @@
 import { setTimeout as delay } from 'node:timers/promises'
+import { parseArgumentTokens } from './reproducer.mjs'
 
+const shortIdPattern = /^[A-Za-z0-9_-]+$/
+const clangIdPattern = /^c?clang(?:\d+|_[a-z])[a-z0-9_]*$/
+const clangReleaseIdPattern = /^c?clang\d+(?:assert)?$/
+
+export function compilerExplorerShortId(value) {
+  if (typeof value !== 'string') return null
+  const url = URL.parse(value)
+  if (
+    url?.protocol !== 'https:' ||
+    url.username ||
+    url.password ||
+    url.port ||
+    !/^(?:www\.)?(?:godbolt\.org|compiler-explorer\.com)$/.test(url.hostname)
+  ) {
+    return null
+  }
+  return /^\/z\/([A-Za-z0-9_-]+)\/?$/.exec(url.pathname)?.[1] ?? null
+}
+
+export function parseShortlinkSession(state) {
+  if (!Array.isArray(state?.sessions) || (state.trees != null && !isEmptyList(state.trees))) {
+    return null
+  }
+  if (state.sessions.some((session) => typeof session?.source !== 'string')) return null
+  const editors = state.sessions.filter(({ source }) => source.trim())
+  if (editors.length !== 1) return null
+  const { source, language, compilers } = editors[0]
+  if ((language !== 'c' && language !== 'c++') || !Array.isArray(compilers)) return null
+
+  const clang = compilers.filter(
+    (compiler) => typeof compiler?.id === 'string' && clangIdPattern.test(compiler.id),
+  )
+  // Prefer a single historical compiler and keep its options paired with it.
+  const releases = clang.filter(({ id }) => clangReleaseIdPattern.test(id))
+  const choices = releases.length ? releases : clang
+  if (choices.length !== 1) return null
+  const [{ id: compilerId, options, libs, overrides }] = choices
+  if (
+    typeof options !== 'string' ||
+    (libs != null && !isEmptyList(libs)) ||
+    (overrides != null && !isEmptyList(overrides))
+  ) {
+    return null
+  }
+  const compileArgs = parseArgumentTokens(options)
+  return compileArgs && { sourceCode: source, compileArgs, language, compilerId }
+}
+
+function isEmptyList(value) {
+  return Array.isArray(value) && value.length === 0
+}
 export class CompilerExplorerError extends Error {
   constructor(code, message, options) {
     super(message, options)
@@ -110,6 +162,12 @@ export function createCompilerExplorerClient({
   return {
     async listCompilers(language = 'c++') {
       return [...(await compilerCatalog(language)).values()].map((entry) => ({ ...entry }))
+    },
+    async fetchShortlink(shortId) {
+      if (typeof shortId !== 'string' || !shortIdPattern.test(shortId)) {
+        throw new TypeError('fetchShortlink requires a valid Compiler Explorer shortlink ID')
+      }
+      return parseShortlinkSession(await request(`api/shortlinkinfo/${shortId}`))
     },
     async compile({ compilerId, sourceCode, compileArgs, language = 'c++', godboltUrl = null }) {
       if (
