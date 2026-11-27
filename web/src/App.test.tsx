@@ -28,7 +28,11 @@ afterEach(() => {
 
 function open(hash: string) {
   window.history.replaceState(null, '', hash)
-  return render(<HashRouter><App queryClient={client} /></HashRouter>)
+  return render(
+    <HashRouter>
+      <App queryClient={client} />
+    </HashRouter>,
+  )
 }
 
 function fixture(part: string) {
@@ -65,7 +69,9 @@ async function openSearch() {
   if (!dialogPrototype.showModal) {
     Object.defineProperty(dialogPrototype, 'showModal', {
       configurable: true,
-      value(this: HTMLDialogElement) { this.open = true },
+      value(this: HTMLDialogElement) {
+        this.open = true
+      },
     })
     restoreShowModal = true
   }
@@ -78,36 +84,54 @@ async function openSearch() {
 describe('static workbench', () => {
   it('restores a shared issue URL and writes source and sort changes back to the hash', async () => {
     mockFetch()
-    open('#/issues?module=clang-sema&source=generated-by-fuzzer&queue=close-candidate&sort=reported&item=202')
+    open(
+      '#/issues?module=clang-sema&source=generated-by-fuzzer&queue=close-candidate&sort=reported&item=202',
+    )
     const detail = within(await screen.findByRole('region', { name: 'Issue details' }))
     expect(await detail.findByRole('heading', { name: issue202.title })).toBeTruthy()
     expect(detail.getByRole('heading', { name: 'Fuzzer Crash Signature' })).toBeTruthy()
     const filter = within(screen.getByRole('group', { name: 'Issue source' }))
-    expect(filter.getByRole('button', { name: 'generated-by-fuzzer' }).getAttribute('aria-pressed')).toBe('true')
-    expect((screen.getByRole('combobox', { name: 'Sort' }) as HTMLSelectElement).value).toBe('reported')
+    expect(
+      filter.getByRole('button', { name: 'generated-by-fuzzer' }).getAttribute('aria-pressed'),
+    ).toBe('true')
+    expect((screen.getByRole('combobox', { name: 'Sort' }) as HTMLSelectElement).value).toBe(
+      'reported',
+    )
     fireEvent.click(filter.getByRole('button', { name: 'Human-reported' }))
-    fireEvent.change(screen.getByRole('combobox', { name: 'Sort' }), { target: { value: 'activity' } })
+    fireEvent.change(screen.getByRole('combobox', { name: 'Sort' }), {
+      target: { value: 'activity' },
+    })
     const params = new URLSearchParams(window.location.hash.split('?')[1])
     expect(Object.fromEntries(params)).toEqual({
-      module: 'clang-sema', source: 'human-reported', queue: 'close-candidate', sort: 'activity',
+      module: 'clang-sema',
+      source: 'human-reported',
+      queue: 'close-candidate',
+      sort: 'activity',
     })
   })
 
   it('moves focus with j/k, opens with Enter, and ignores a late response for the previous selection', async () => {
     let finishOld!: (value: Response) => void
-    const oldResponse = new Promise<Response>(resolve => { finishOld = resolve })
-    const fetcher = mockFetch(path => path.endsWith('/pr-101.json') ? oldResponse : undefined)
+    const oldResponse = new Promise<Response>((resolve) => {
+      finishOld = resolve
+    })
+    const fetcher = mockFetch((path) => (path.endsWith('/pr-101.json') ? oldResponse : undefined))
     open('#/prs?module=clang-sema')
     const row = await screen.findByRole('button', { name: /#101/ })
     fireEvent.keyDown(window, { key: 'j' })
     expect(document.activeElement).toBe(row)
     // Enter activates the native row button. jsdom does not synthesize that click.
     fireEvent.click(row)
-    await waitFor(() => expect(fetcher.mock.calls.some(([path]) => path.endsWith('/pr-101.json'))).toBe(true))
+    await waitFor(() =>
+      expect(fetcher.mock.calls.some(([path]) => path.endsWith('/pr-101.json'))).toBe(true),
+    )
     fireEvent.keyDown(row, { key: 'j' })
     const detail = within(await screen.findByRole('region', { name: 'Pull request details' }))
     expect(await detail.findByRole('heading', { name: pr104.title })).toBeTruthy()
-    await act(async () => { finishOld(json(pr101)); await oldResponse })
+    await act(async () => {
+      finishOld(json(pr101))
+      await oldResponse
+    })
     expect(detail.queryByRole('heading', { name: pr101.title })).toBeNull()
     expect(new URLSearchParams(window.location.hash.split('?')[1]).get('item')).toBe('104')
     fireEvent.keyDown(window, { key: 'Escape' })
@@ -118,16 +142,24 @@ describe('static workbench', () => {
     const replacement = 'replacement-2026-11-27'
     const moved = { ...pr101, snapshotId: replacement, queues: ['long-inactive'] }
     let count = 0
-    const fetcher = mockFetch(path => {
-      if (path.endsWith('/summary.json') && ++count > 1) return json({
-        ...summary, snapshotId: replacement, snapshotRoot: `snapshots/${replacement}/`,
-      })
-      if (path.includes(summary.snapshotRoot) && path.endsWith('/pr-101.json')) return new Response(null, { status: 404 })
-      if (path.includes(replacement)) {
-        if (path.endsWith('/prs-index.json')) return json({
-          ...prIndex, snapshotId: replacement,
-          items: prIndex.items.map(pr => pr.id === moved.id ? { ...pr, queues: moved.queues } : pr),
+    const fetcher = mockFetch((path) => {
+      if (path.endsWith('/summary.json') && ++count > 1)
+        return json({
+          ...summary,
+          snapshotId: replacement,
+          snapshotRoot: `snapshots/${replacement}/`,
         })
+      if (path.includes(summary.snapshotRoot) && path.endsWith('/pr-101.json'))
+        return new Response(null, { status: 404 })
+      if (path.includes(replacement)) {
+        if (path.endsWith('/prs-index.json'))
+          return json({
+            ...prIndex,
+            snapshotId: replacement,
+            items: prIndex.items.map((pr) =>
+              pr.id === moved.id ? { ...pr, queues: moved.queues } : pr,
+            ),
+          })
         if (path.endsWith('/pr-101.json')) return json(moved)
       }
     })
@@ -139,7 +171,9 @@ describe('static workbench', () => {
     fireEvent.click(button)
     expect(await detail.findByRole('heading', { name: pr101.title })).toBeTruthy()
     expect(detail.getByText(/2 commits since approval/)).toBeTruthy()
-    expect(within(detail.getByText('Review at HEAD').parentElement!).getByText('Unknown')).toBeTruthy()
+    const reviewFact = detail.getByText('Review at HEAD').parentElement
+    if (reviewFact === null) throw new Error('Missing review fact container')
+    expect(within(reviewFact).getByText('Unknown')).toBeTruthy()
     expect(window.location.hash).toBe(hash)
     expect(detail.getByText(/does not match the current filters/)).toBeTruthy()
     expect(screen.queryByRole('button', { name: /#101/ })).toBeNull()
@@ -147,7 +181,11 @@ describe('static workbench', () => {
     expect(window.location.hash).toBe('#/prs?module=clang-sema&item=101&sort=oldest')
     expect(detail.queryByRole('button', { name: 'Clear filters' })).toBeNull()
     expect(screen.getByRole('button', { name: /#101/ }).getAttribute('aria-current')).toBe('true')
-    expect(fetcher.mock.calls.some(([url]) => url.endsWith(`snapshots/${replacement}/items/pr-101.json`))).toBe(true)
+    expect(
+      fetcher.mock.calls.some(([url]) =>
+        url.endsWith(`snapshots/${replacement}/items/pr-101.json`),
+      ),
+    ).toBe(true)
     expect(detail.queryByText(/@mock-ci/)).toBeNull()
     fireEvent.click(detail.getByRole('checkbox', { name: 'Human only' }))
     expect(detail.getByText('@mock-ci')).toBeTruthy()
@@ -171,12 +209,17 @@ describe('static workbench', () => {
   it('recovers a missing search index alongside a cached one without clearing the search term', async () => {
     const replacement = 'replacement-2026-11-27'
     let count = 0
-    const fetcher = mockFetch(path => {
-      if (path.endsWith('/summary.json') && ++count > 1) return json({
-        ...summary, snapshotId: replacement, snapshotRoot: `snapshots/${replacement}/`,
-      })
+    const fetcher = mockFetch((path) => {
+      if (path.endsWith('/summary.json') && ++count > 1)
+        return json({
+          ...summary,
+          snapshotId: replacement,
+          snapshotRoot: `snapshots/${replacement}/`,
+        })
       if (path.endsWith('/issues-index.json')) {
-        return path.includes(replacement) ? json({ ...issueIndex, snapshotId: replacement }) : new Response(null, { status: 404 })
+        return path.includes(replacement)
+          ? json({ ...issueIndex, snapshotId: replacement })
+          : new Response(null, { status: 404 })
       }
       if (path.includes(replacement) && path.endsWith('/prs-index.json')) {
         return json({ ...prIndex, snapshotId: replacement })
@@ -202,7 +245,9 @@ describe('static workbench', () => {
     mockFetch()
     open('#/prs?module=clang-sema&queue=approved-follow-up')
     const dialog = await openSearch()
-    fireEvent.change(dialog.getByRole('textbox', { name: 'Search query' }), { target: { value: '#101' } })
+    fireEvent.change(dialog.getByRole('textbox', { name: 'Search query' }), {
+      target: { value: '#101' },
+    })
     fireEvent.click(await dialog.findByRole('button', { name: /PR #101/ }))
     expect(window.location.hash).toBe('#/prs?module=clang-sema&item=101')
     expect(screen.queryByRole('dialog')).toBeNull()
@@ -218,7 +263,9 @@ describe('static workbench', () => {
   })
 
   it('shows one recovery action for an unavailable issue index', async () => {
-    mockFetch(path => path.endsWith('/issues-index.json') ? new Response(null, { status: 404 }) : undefined)
+    mockFetch((path) =>
+      path.endsWith('/issues-index.json') ? new Response(null, { status: 404 }) : undefined,
+    )
     open('#/issues?module=clang-sema&item=202')
     expect(await screen.findByRole('button', { name: 'Load latest snapshot' })).toBeTruthy()
     expect(screen.getAllByRole('alert')).toHaveLength(1)
@@ -226,15 +273,23 @@ describe('static workbench', () => {
   })
 
   it('labels a human-reported crash and only quotes empty or whitespace-containing compiler arguments', async () => {
-    mockFetch(path => {
-      if (path.endsWith('/issues-index.json')) return json({
-        ...issueIndex,
-        items: issueIndex.items.map(issue => issue.id === issue202.id ? { ...issue, source: 'human-reported' } : issue),
-      })
-      if (path.endsWith('/issue-202.json')) return json({
-        ...issue202, source: 'human-reported',
-        repro: { ...issue202.repro, compileArgs: ['-std=c++17', '-Ipath with spaces', '', '-DNAME=value'] },
-      })
+    mockFetch((path) => {
+      if (path.endsWith('/issues-index.json'))
+        return json({
+          ...issueIndex,
+          items: issueIndex.items.map((issue) =>
+            issue.id === issue202.id ? { ...issue, source: 'human-reported' } : issue,
+          ),
+        })
+      if (path.endsWith('/issue-202.json'))
+        return json({
+          ...issue202,
+          source: 'human-reported',
+          repro: {
+            ...issue202.repro,
+            compileArgs: ['-std=c++17', '-Ipath with spaces', '', '-DNAME=value'],
+          },
+        })
     })
     open('#/issues?module=clang-sema&item=202')
     const detail = within(await screen.findByRole('region', { name: 'Issue details' }))
@@ -253,23 +308,30 @@ describe('static workbench', () => {
     const detail = within(await screen.findByRole('region', { name: 'Issue details' }))
     expect(await detail.findByRole('heading', { name: issue201.title })).toBeTruthy()
     expect(detail.getByRole('heading', { name: 'Fix Attribution · Confirmed' })).toBeTruthy()
-    expect(detail.getByRole('region', { name: 'Baseline diagnostics' }).querySelector('pre')?.textContent)
-      .toBe(issue201.runs.baseline.diagnostics)
+    expect(
+      detail.getByRole('region', { name: 'Baseline diagnostics' }).querySelector('pre')
+        ?.textContent,
+    ).toBe(issue201.runs.baseline.diagnostics)
     await detail.findByLabelText('Reproducer source')
     fireEvent.click(detail.getByRole('button', { name: 'Copy source' }))
     fireEvent.click(detail.getByRole('button', { name: 'Copy Close Comment' }))
     await waitFor(() => expect(writeText.mock.calls).toHaveLength(2))
     expect(writeText.mock.calls[0][0]).toBe(issue201.repro.sourceCode)
-    expect(writeText.mock.calls[1][0]).toBe([
-      'I rechecked the reproducer from this issue with the following compilers:',
-      '- Baseline: mock clang 6.0.0 (exit 1) reproduced the reported symptom. [Compiler Explorer](https://godbolt.example.invalid/z/201-baseline)',
-      '- Trunk: mock clang trunk (rev 123abcd) (exit 0) met the expected behavior. [Compiler Explorer](https://godbolt.example.invalid/z/201-trunk)',
-      '',
-      'Expected behavior: The compiler accepts the program.',
-      '',
-      'Could a maintainer confirm whether this issue can be closed?',
-    ].join('\n'))
-    expect(detail.getAllByRole('status').map(status => status.textContent)).toEqual(['Copied', 'Copied'])
+    expect(writeText.mock.calls[1][0]).toBe(
+      [
+        'I rechecked the reproducer from this issue with the following compilers:',
+        '- Baseline: mock clang 6.0.0 (exit 1) reproduced the reported symptom. [Compiler Explorer](https://godbolt.example.invalid/z/201-baseline)',
+        '- Trunk: mock clang trunk (rev 123abcd) (exit 0) met the expected behavior. [Compiler Explorer](https://godbolt.example.invalid/z/201-trunk)',
+        '',
+        'Expected behavior: The compiler accepts the program.',
+        '',
+        'Could a maintainer confirm whether this issue can be closed?',
+      ].join('\n'),
+    )
+    expect(detail.getAllByRole('status').map((status) => status.textContent)).toEqual([
+      'Copied',
+      'Copied',
+    ])
   })
 
   it('shows recorded evidence gaps without offering a close comment', async () => {

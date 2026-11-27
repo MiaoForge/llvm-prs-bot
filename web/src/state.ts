@@ -40,30 +40,52 @@ export function useFilters() {
   return {
     params,
     update,
-    reset: () => setParams(new URLSearchParams(params.has('module') ? { module: params.get('module')! } : {})),
+    reset: () => {
+      const module = params.get('module')
+      setParams(new URLSearchParams(module === null ? {} : { module }))
+    },
   }
 }
 
-export function workbenchLink(view: View | 'overview', module?: string, values: Record<string, string> = {}) {
+export function workbenchLink(
+  view: View | 'overview',
+  module?: string,
+  values: Record<string, string> = {},
+) {
   const params = new URLSearchParams(module ? { module, ...values } : values)
-  return (view === 'overview' ? '/' : '/' + view) + (params.size ? '?' + params : '')
+  return (view === 'overview' ? '/' : `/${view}`) + (params.size ? `?${params}` : '')
 }
 
-export function choice<T extends string>(value: string | null, options: Record<T, string>, fallback: NoInfer<T>) {
-  return value !== null && Object.hasOwn(options, value) ? value as T : fallback
+export function choice<T extends string>(
+  value: string | null,
+  options: Record<T, string>,
+  fallback: NoInfer<T>,
+) {
+  return value !== null && Object.hasOwn(options, value) ? (value as T) : fallback
 }
 
-export function searchMatch(item: { id: number; title: string; author?: string }, query: string | null) {
+export function searchMatch(
+  item: { id: number; title: string; author?: string },
+  query: string | null,
+) {
   const search = query?.trim().toLowerCase()
   if (!search) return true
   if (/^#?\d+$/.test(search)) return String(item.id) === search.replace(/^#/, '')
   return `${item.title} ${item.author ?? ''}`.toLowerCase().includes(search)
 }
 
-const date = (value: string | null) => value === null ? -Infinity : Date.parse(value)
+const date = (value: string | null) => (value === null ? -Infinity : Date.parse(value))
 
-export const prSorts = { priority: 'Actionability', activity: 'Last Human Activity', oldest: 'Oldest Opened' }
-export const issueSorts = { verified: 'Last Verified', reported: 'Original Report Date', activity: 'Last Human Comment' }
+export const prSorts = {
+  priority: 'Actionability',
+  activity: 'Last Human Activity',
+  oldest: 'Oldest Opened',
+}
+export const issueSorts = {
+  verified: 'Last Verified',
+  reported: 'Original Report Date',
+  activity: 'Last Human Comment',
+}
 
 export function filterPrs(items: PrRow[], params: URLSearchParams, referenceTime: string) {
   const queue = params.get('queue')
@@ -72,17 +94,22 @@ export function filterPrs(items: PrRow[], params: URLSearchParams, referenceTime
   const days = Number(params.get('inactive'))
   const sort = choice(params.get('sort'), prSorts, 'priority')
   const threshold = date(referenceTime) - days * 86_400_000
-  return items.filter(item =>
-    (!queue || queue === 'all' || item.queues.some(value => value === queue))
-    && (!ci || ci === 'all' || item.headCi.status === ci)
-    && (!merge || merge === 'all' || item.mergeability === merge)
-    && (!days || (item.lastHumanActivityAt !== null && date(item.lastHumanActivityAt) <= threshold))
-    && searchMatch(item, params.get('q')),
-  ).sort((a, b) => {
-    if (sort === 'activity') return (date(b.lastHumanActivityAt) - date(a.lastHumanActivityAt)) || a.id - b.id
-    if (sort === 'oldest') return date(a.createdAt) - date(b.createdAt) || a.id - b.id
-    return b.priority - a.priority || a.id - b.id
-  })
+  return items
+    .filter(
+      (item) =>
+        (!queue || queue === 'all' || item.queues.some((value) => value === queue)) &&
+        (!ci || ci === 'all' || item.headCi.status === ci) &&
+        (!merge || merge === 'all' || item.mergeability === merge) &&
+        (!days ||
+          (item.lastHumanActivityAt !== null && date(item.lastHumanActivityAt) <= threshold)) &&
+        searchMatch(item, params.get('q')),
+    )
+    .sort((a, b) => {
+      if (sort === 'activity')
+        return date(b.lastHumanActivityAt) - date(a.lastHumanActivityAt) || a.id - b.id
+      if (sort === 'oldest') return date(a.createdAt) - date(b.createdAt) || a.id - b.id
+      return b.priority - a.priority || a.id - b.id
+    })
 }
 
 export function filterIssues(items: IssueRow[], params: URLSearchParams, referenceTime: string) {
@@ -94,25 +121,36 @@ export function filterIssues(items: IssueRow[], params: URLSearchParams, referen
   }
   const five = cutoff(5)
   const ten = cutoff(10)
-  return items.filter(item => {
-    for (const [key, value] of [['queue', item.conclusion], ['source', item.source], ['fix', item.fixStatus]] as const) {
-      const filter = params.get(key)
-      if (filter && filter !== 'all' && value !== filter) return false
-    }
-    const reported = date(item.originalReportAt)
-    if (age === 'older' && reported > ten) return false
-    if (age === 'middle' && (reported <= ten || reported > five)) return false
-    if (age === 'recent' && reported <= five) return false
-    return searchMatch(item, params.get('q'))
-  }).sort((a, b) => {
-    if (sort === 'reported') return date(a.originalReportAt) - date(b.originalReportAt) || a.id - b.id
-    const key = sort === 'activity' ? 'lastHumanCommentAt' : 'lastVerifiedAt'
-    return (date(b[key]) - date(a[key])) || a.id - b.id
-  })
+  return items
+    .filter((item) => {
+      for (const [key, value] of [
+        ['queue', item.conclusion],
+        ['source', item.source],
+        ['fix', item.fixStatus],
+      ] as const) {
+        const filter = params.get(key)
+        if (filter && filter !== 'all' && value !== filter) return false
+      }
+      const reported = date(item.originalReportAt)
+      if (age === 'older' && reported > ten) return false
+      if (age === 'middle' && (reported <= ten || reported > five)) return false
+      if (age === 'recent' && reported <= five) return false
+      return searchMatch(item, params.get('q'))
+    })
+    .sort((a, b) => {
+      if (sort === 'reported')
+        return date(a.originalReportAt) - date(b.originalReportAt) || a.id - b.id
+      const key = sort === 'activity' ? 'lastHumanCommentAt' : 'lastVerifiedAt'
+      return date(b[key]) - date(a[key]) || a.id - b.id
+    })
 }
 
-export function nextItem(items: readonly { id: number }[], focused: number | null, direction: 1 | -1) {
-  const position = items.findIndex(item => item.id === focused)
+export function nextItem(
+  items: readonly { id: number }[],
+  focused: number | null,
+  direction: 1 | -1,
+) {
+  const position = items.findIndex((item) => item.id === focused)
   if (position < 0) return (direction === 1 ? items[0] : items.at(-1))?.id ?? null
   return items[Math.max(0, Math.min(items.length - 1, position + direction))].id
 }

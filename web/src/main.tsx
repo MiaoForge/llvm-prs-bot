@@ -4,7 +4,10 @@ import { HashRouter } from 'react-router'
 import { App } from './App'
 import './styles.css'
 
-createRoot(document.getElementById('root')!).render(
+const root = document.getElementById('root')
+if (root === null) throw new Error('Missing application root')
+
+createRoot(root).render(
   <StrictMode>
     <HashRouter>
       <App />

@@ -1,0 +1,12 @@
+/biome.json text eol=lf
+/package.json text eol=lf
+/pipeline/**/*.mjs text eol=lf
+/pipeline/**/*.ts text eol=lf
+/pipeline/**/*.tsx text eol=lf
+/pipeline/**/*.css text eol=lf
+/pipeline/**/*.json text eol=lf
+/web/**/*.mjs text eol=lf
+/web/**/*.ts text eol=lf
+/web/**/*.tsx text eol=lf
+/web/**/*.css text eol=lf
+/web/**/*.json text eol=lf

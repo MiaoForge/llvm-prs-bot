@@ -10,7 +10,8 @@ const contracts = {
   pr: 'PrDetail',
   issue: 'IssueDetail',
 }
-const readSchema = async name => JSON.parse(await readFile(new URL(name + '.schema.json', root), 'utf8'))
+const readSchema = async (name) =>
+  JSON.parse(await readFile(new URL(`${name}.schema.json`, root), 'utf8'))
 const common = await readSchema('common')
 
 function inlineShared(value) {
@@ -19,10 +20,16 @@ function inlineShared(value) {
   const { $ref, ...siblings } = value
   if ($ref) {
     const key = $ref.replace(/^common\.schema\.json#\/\$defs\//, '')
-    if (!Object.hasOwn(common.$defs, key)) throw new Error('Unresolved reference: ' + $ref)
-    return inlineShared({ ...common.$defs[key], ...siblings, ...(siblings.unevaluatedProperties === false && { additionalProperties: false }) })
+    if (!Object.hasOwn(common.$defs, key)) throw new Error(`Unresolved reference: ${$ref}`)
+    return inlineShared({
+      ...common.$defs[key],
+      ...siblings,
+      ...(siblings.unevaluatedProperties === false && { additionalProperties: false }),
+    })
   }
-  return Object.fromEntries(Object.entries(siblings).map(([key, child]) => [key, inlineShared(child)]))
+  return Object.fromEntries(
+    Object.entries(siblings).map(([key, child]) => [key, inlineShared(child)]),
+  )
 }
 
 await mkdir(output, { recursive: true })
@@ -41,5 +48,5 @@ for (const [file, type] of Object.entries(contracts)) {
     ignoreMinAndMaxItems: true,
     style: { semi: false, singleQuote: true },
   })
-  await writeFile(new URL(file + '.ts', output), types)
+  await writeFile(new URL(`${file}.ts`, output), types)
 }

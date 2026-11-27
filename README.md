@@ -15,6 +15,21 @@ Use one independently reviewable change per commit. Write an imperative title
 in the form `[component] Concise summary` and explain why the change is needed
 and how it was tested in the commit body.
 
+## Format and lint
+
+From the repository root, install the pinned Biome tool with `npm ci`.
+
+```sh
+npm run format        # Apply the formatter
+npm run format:check  # Check formatting without writing files
+npm run lint          # Check static rules and treat warnings as failures
+```
+
+These commands check JavaScript, TypeScript, CSS, and JSON source in
+`pipeline/` and `web/`. They skip dependencies, lockfiles, the web build,
+and schema-generated TypeScript. CI runs both checks on pushes and pull
+requests.
+
 ## Validate the mock snapshot
 
 From the repository root, with Node.js 24 and npm installed:

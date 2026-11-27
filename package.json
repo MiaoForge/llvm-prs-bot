@@ -1,0 +1,12 @@
+{
+  "name": "llvm-prs-bot",
+  "private": true,
+  "scripts": {
+    "format": "biome format --write",
+    "format:check": "biome format",
+    "lint": "biome lint --error-on-warnings"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.9"
+  }
+}
