@@ -1,4 +1,4 @@
-import { CompilerExplorerError } from './compiler-explorer.mjs'
+import { compilerExplorerClientstateUrl, CompilerExplorerError } from './compiler-explorer.mjs'
 import { matchRun, verifyIssue } from './issue-verification.mjs'
 
 export async function reverifyIssue(issue, { client, verifiedAt }) {
@@ -10,12 +10,16 @@ export async function reverifyIssue(issue, { client, verifiedAt }) {
       const compilerId = issue.compilers?.[side]
       if (!compilerId) continue
       try {
+        const language = issue.language ?? 'c++'
+        const godboltUrl =
+          issue.godboltUrls?.[side] ??
+          compilerExplorerClientstateUrl({ compilerId, sourceCode, compileArgs, language })
         const { truncated, ...run } = await client.compile({
           compilerId,
           sourceCode,
           compileArgs,
-          language: issue.language,
-          godboltUrl: issue.godboltUrls?.[side] ?? null,
+          language,
+          godboltUrl,
         })
         runs[side] = { ...run, outcome: truncated ? 'unknown' : matchRun(run, issue.expectations) }
       } catch (error) {

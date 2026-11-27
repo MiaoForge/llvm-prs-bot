@@ -260,7 +260,8 @@ test('runs the complete pipeline offline and budgets and persists comparisons ac
     { moduleId: 'clang-sema', matchedLabels: ['clang:sema'] },
   ])
   assert.deepEqual(issue.repro.reporterGodboltUrls, ['https://godbolt.org/z/example'])
-  assert.equal(issue.runs.trunk.godboltUrl, null)
+  assert.ok(issue.runs.trunk.godboltUrl?.startsWith('https://godbolt.org/clientstate/'))
+  assert.notEqual(issue.runs.trunk.godboltUrl, issue.repro.reporterGodboltUrls[0])
   assert.equal(
     validateSnapshot(output, { expectedSnapshotId: initial.input.snapshotId }).issueTotal,
     2,

@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { createCompilerExplorerClient, parseShortlinkSession } from './compiler-explorer.mjs'
+import {
+  compilerExplorerClientstateUrl,
+  createCompilerExplorerClient,
+  parseShortlinkSession,
+} from './compiler-explorer.mjs'
 import { reverifyIssue } from './reverify-issue.mjs'
 
 const repro = {
@@ -124,7 +128,25 @@ test('fetches observed compiler versions and sends lossless compile-only argumen
   assert.equal(detail.runs.baseline.exitCode, 1)
   assert.equal(detail.runs.baseline.diagnostics, ' error: unexpected diagnostic  \n    ^')
   assert.equal(detail.runs.baseline.godboltUrl, 'https://godbolt.example.invalid/z/mock')
-  assert.equal(detail.runs.trunk.godboltUrl, null)
+  assert.ok(detail.runs.trunk.godboltUrl?.startsWith('https://godbolt.org/clientstate/'))
+  const trunkState = JSON.parse(
+    Buffer.from(
+      decodeURIComponent(
+        detail.runs.trunk.godboltUrl.slice('https://godbolt.org/clientstate/'.length),
+      ),
+      'base64',
+    ).toString('utf8'),
+  )
+  assert.deepEqual(trunkState, {
+    sessions: [
+      {
+        id: 1,
+        language: 'c++',
+        source: repro.sourceCode,
+        compilers: [{ id: 'new-clang', options: '-std=c++17 "-DVALUE=\\"two words\\""' }],
+      },
+    ],
+  })
   assert.deepEqual(
     requests.map(({ url }) => url.pathname),
     [
@@ -241,4 +263,47 @@ test('skips network requests when the repro is incomplete', async () => {
   )
   assert.deepEqual(failures, {})
   assert.deepEqual(detail.missingEvidence, ['compile-arguments', 'baseline-run', 'trunk-run'])
+})
+
+test('builds bounded Compiler Explorer clientstate URLs and rejects invalid or oversized inputs', () => {
+  const cUrl = compilerExplorerClientstateUrl({
+    compilerId: 'cclang2210',
+    sourceCode: 'int main(void) { return 0; }\n',
+    compileArgs: ['-std=c17', '-DMSG=hello world'],
+    language: 'c',
+  })
+  assert.ok(cUrl?.startsWith('https://godbolt.org/clientstate/'))
+  const decoded = JSON.parse(
+    Buffer.from(
+      decodeURIComponent(cUrl.slice('https://godbolt.org/clientstate/'.length)),
+      'base64',
+    ).toString('utf8'),
+  )
+  assert.deepEqual(decoded, {
+    sessions: [
+      {
+        id: 1,
+        language: 'c',
+        source: 'int main(void) { return 0; }\n',
+        compilers: [{ id: 'cclang2210', options: '-std=c17 "-DMSG=hello world"' }],
+      },
+    ],
+  })
+  assert.equal(
+    compilerExplorerClientstateUrl({
+      compilerId: 'clang_trunk',
+      sourceCode: 'a'.repeat(5000),
+      compileArgs: [],
+      language: 'c++',
+    }),
+    null,
+  )
+  assert.equal(
+    compilerExplorerClientstateUrl({
+      compilerId: 'clang_trunk',
+      sourceCode: 'int x;',
+      language: 'rust',
+    }),
+    null,
+  )
 })

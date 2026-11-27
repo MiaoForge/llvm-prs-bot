@@ -4,6 +4,49 @@ import { parseArgumentTokens } from './reproducer.mjs'
 const shortIdPattern = /^[A-Za-z0-9_-]+$/
 const clangIdPattern = /^c?clang(?:\d+|_[a-z])[a-z0-9_]*$/
 const clangReleaseIdPattern = /^c?clang\d+(?:assert)?$/
+const defaultMaxClientstateUrlLength = 4096
+
+function formatCompilerOptions(compileArgs) {
+  return compileArgs
+    .map((arg) =>
+      arg === '' || /[\s"'\\]/.test(arg) ? `"${arg.replace(/([\\"])/g, '\\$1')}"` : arg,
+    )
+    .join(' ')
+}
+
+export function compilerExplorerClientstateUrl({
+  compilerId,
+  sourceCode,
+  compileArgs = [],
+  language = 'c++',
+  baseUrl = 'https://godbolt.org/',
+  maxUrlLength = defaultMaxClientstateUrlLength,
+}) {
+  if (
+    typeof compilerId !== 'string' ||
+    !/^[a-z0-9_+-][a-z0-9_.+-]*$/i.test(compilerId) ||
+    typeof sourceCode !== 'string' ||
+    sourceCode.length === 0 ||
+    (language !== 'c' && language !== 'c++') ||
+    !Array.isArray(compileArgs) ||
+    compileArgs.some((arg) => typeof arg !== 'string')
+  ) {
+    return null
+  }
+  const state = {
+    sessions: [
+      {
+        id: 1,
+        language,
+        source: sourceCode,
+        compilers: [{ id: compilerId, options: formatCompilerOptions(compileArgs) }],
+      },
+    ],
+  }
+  const encoded = encodeURIComponent(Buffer.from(JSON.stringify(state), 'utf8').toString('base64'))
+  const url = new URL(`clientstate/${encoded}`, baseUrl).href
+  return url.length <= maxUrlLength ? url : null
+}
 
 export function compilerExplorerShortId(value) {
   if (typeof value !== 'string') return null
