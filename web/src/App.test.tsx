@@ -343,6 +343,32 @@ describe('static workbench', () => {
     expect(detail.queryByRole('button', { name: 'Copy Close Comment' })).toBeNull()
   })
 
+  it('labels bounded coverage and presents overview counts as sampled', async () => {
+    const note = 'Includes a bounded sample of open PRs and issues in the configured modules.'
+    mockFetch((path) =>
+      path.endsWith('/summary.json')
+        ? json({ ...summary, coverage: { mode: 'bounded-sample', note } })
+        : undefined,
+    )
+
+    open('#/')
+    expect(await screen.findByText('Bounded sample')).toBeTruthy()
+    expect(screen.getByText(note)).toBeTruthy()
+    expect(
+      screen.getByText(
+        `${summary.kpis.prTotal} sampled PRs and ${summary.kpis.issueTotal} sampled issues in this snapshot`,
+      ),
+    ).toBeTruthy()
+    expect(
+      screen.getByRole('heading', { name: /PR Actionable Queues · \d+ Sampled PRs/ }),
+    ).toBeTruthy()
+    expect(
+      screen.getByRole('heading', { name: /Issue Verification · \d+ Sampled Issues/ }),
+    ).toBeTruthy()
+    expect(screen.getByRole('columnheader', { name: 'Sampled PRs' })).toBeTruthy()
+    expect(screen.getByRole('columnheader', { name: 'Sampled Issues' })).toBeTruthy()
+  })
+
   it('persists the selected theme across mounts', () => {
     mockFetch()
     localStorage.clear()

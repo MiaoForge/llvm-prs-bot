@@ -23,6 +23,8 @@ export function Overview({ summary, moduleId, reload, busy }: WorkbenchProps) {
   const prs = useQuery(prIndexOptions(summary, moduleId))
   const issues = useQuery(issueIndexOptions(summary, moduleId))
   const kpis = summary.modules.find((module) => module.id === moduleId)?.counts ?? summary.kpis
+  const { coverage } = summary
+  const sampled = coverage?.mode === 'bounded-sample'
   const topPrs = filterPrs(prs.data?.items ?? [], new URLSearchParams(), summary.generatedAt).slice(
     0,
     3,
@@ -37,8 +39,18 @@ export function Overview({ summary, moduleId, reload, busy }: WorkbenchProps) {
       <div className="ov-wrap">
         <section className="overview-header">
           <h2>LLVM Backlog Triage</h2>
+          {coverage && (
+            <p className="flex flex-wrap items-center gap-x-2">
+              <span className={`badge ${sampled ? 'warn' : 'mut'}`}>
+                {sampled ? 'Bounded sample' : 'Full coverage'}
+              </span>
+              <span>{coverage.note}</span>
+            </p>
+          )}
           <p>
-            {summary.kpis.prTotal} open PRs and {summary.kpis.issueTotal} issues across all modules
+            {sampled
+              ? `${summary.kpis.prTotal} sampled PRs and ${summary.kpis.issueTotal} sampled issues in this snapshot`
+              : `${summary.kpis.prTotal} open PRs and ${summary.kpis.issueTotal} issues across all modules`}
           </p>
           <p>
             GitHub synced{' '}
@@ -50,7 +62,9 @@ export function Overview({ summary, moduleId, reload, busy }: WorkbenchProps) {
           </p>
         </section>
         <section>
-          <h2 className="sec-h">PR Actionable Queues · {kpis.prTotal} Open PRs</h2>
+          <h2 className="sec-h">
+            PR Actionable Queues · {kpis.prTotal} {sampled ? 'Sampled PRs' : 'Open PRs'}
+          </h2>
           <div className="kpi-4">
             {Object.entries(prQueues).map(([queue, label], index) => (
               <Kpi
@@ -66,7 +80,9 @@ export function Overview({ summary, moduleId, reload, busy }: WorkbenchProps) {
           </div>
         </section>
         <section>
-          <h2 className="sec-h">Issue Verification · {kpis.issueTotal} Issues Processed</h2>
+          <h2 className="sec-h">
+            Issue Verification · {kpis.issueTotal} {sampled ? 'Sampled Issues' : 'Issues Processed'}
+          </h2>
           <div className="kpi-4">
             {Object.entries(issueQueues).map(([queue, label], index) => (
               <Kpi
@@ -98,10 +114,10 @@ export function Overview({ summary, moduleId, reload, busy }: WorkbenchProps) {
                   <tr>
                     <th scope="col">Module</th>
                     <th scope="col" className="num">
-                      Open PRs
+                      {sampled ? 'Sampled PRs' : 'Open PRs'}
                     </th>
                     <th scope="col" className="num">
-                      Issues
+                      {sampled ? 'Sampled Issues' : 'Issues'}
                     </th>
                     <th scope="col" className="num">
                       Close Candidates
