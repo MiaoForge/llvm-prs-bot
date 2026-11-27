@@ -205,6 +205,7 @@ test('ranks unique historical PR reviews and excludes bots, the author and reque
     record(16, 'bot', [touchedPath], true),
     record(10, 'same-pr', [touchedPath]),
     record(17, 'unrelated', ['llvm/lib/Support/File.cpp']),
+    { ...record(18, 'self-reviewer', [touchedPath]), author: 'Self-Reviewer' },
   ]
   const requestedReviewers = [{ login: 'Asked', kind: 'user', response: 'pending' }]
   const pr = triage({ requestedReviewers }, { reviewerHistory })

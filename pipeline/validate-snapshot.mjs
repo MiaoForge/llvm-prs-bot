@@ -229,6 +229,13 @@ export function validateSnapshot(dir, { expectedSnapshotId } = {}) {
           const detailFile = `${kind}-${row.id}.json`
           const detailPath = `items/${detailFile}`
           const detail = checkedShard(detailPath, kind)
+          if (detail.moduleEvidence) {
+            same(
+              detail.moduleEvidence.map((evidence) => evidence.moduleId).sort(),
+              [...detail.moduleIds].sort(),
+              `${detailPath}: module evidence does not match the assigned modules`,
+            )
+          }
           validateDetail(detail, detailPath)
           referencedFiles.add(detailFile)
           allItems[kind].set(row.id, { detail, indexedModules: [] })

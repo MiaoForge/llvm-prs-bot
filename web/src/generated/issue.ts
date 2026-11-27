@@ -27,10 +27,25 @@ export interface IssueDetail {
   } | null
   schemaVersion: 1
   snapshotId: string
+  /**
+   * @minItems 1
+   */
+  moduleEvidence?: {
+    moduleId: string
+    /**
+     * @minItems 1
+     */
+    matchedPaths?: string[]
+    /**
+     * @minItems 1
+     */
+    matchedLabels?: string[]
+  }[]
   repro: {
     sourceCode: string | null
     compileArgs: string[] | null
     expectedBehavior: string | null
+    reporterGodboltUrls?: string[]
     sourceUrl: string | null
   }
   runs: {

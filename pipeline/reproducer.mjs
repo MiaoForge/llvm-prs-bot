@@ -118,6 +118,30 @@ function expectedConditions(text, kind) {
   return diagnostic ? { diagnosticIncludes: diagnostic[1] } : {}
 }
 
+function reporterGodboltUrls(markdown) {
+  const urls = new Set()
+  for (const match of markdown.matchAll(/\bhttps:\/\/[^\s<>"'\x60\\\]]+/gi)) {
+    let candidate = match[0].replace(/[.,;!?]+$/, '')
+    // Remove Markdown's closing parenthesis while preserving balanced URL state.
+    let extraClosers = candidate.split(')').length - candidate.split('(').length
+    while (extraClosers > 0 && candidate.endsWith(')')) {
+      candidate = candidate.slice(0, -1)
+      extraClosers--
+    }
+    const url = URL.parse(candidate)
+    if (
+      url &&
+      !url.username &&
+      !url.password &&
+      !url.port &&
+      /^(?:www\.)?(?:godbolt\.org|compiler-explorer\.com)$/.test(url.hostname)
+    ) {
+      urls.add(url.href)
+    }
+  }
+  return [...urls]
+}
+
 export function extractReproducer(body = '', title = '') {
   const markdown = body.replaceAll('\r\n', '\n')
   const fences = [...markdown.matchAll(fencePattern)]
@@ -143,13 +167,19 @@ export function extractReproducer(body = '', title = '') {
     ?.trim()
   const reported = crashSignature ?? (kind === 'diagnostic' ? diagnostic : null)
   const versions = declaredVersions(prose)
+  const links = reporterGodboltUrls(markdown)
   return {
     kind,
     language: source ? languages.get(source[2].toLowerCase()) : null,
     declaredVersion: versions.length === 1 ? versions[0] : null,
     versionAmbiguous: versions.length > 1,
     reportedCrashSignature: crashSignature,
-    repro: { sourceCode: source?.[3]?.trim() ? source[3] : null, compileArgs, expectedBehavior },
+    repro: {
+      sourceCode: source?.[3]?.trim() ? source[3] : null,
+      compileArgs,
+      expectedBehavior,
+      ...(links.length ? { reporterGodboltUrls: links } : {}),
+    },
     expectations: {
       reported: reported ? { diagnosticIncludes: reported } : {},
       expected: expectedConditions(expectedBehavior, kind),

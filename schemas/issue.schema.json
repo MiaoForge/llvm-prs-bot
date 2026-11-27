@@ -10,6 +10,9 @@
     "snapshotId": {
       "$ref": "common.schema.json#/$defs/snapshotId"
     },
+    "moduleEvidence": {
+      "$ref": "common.schema.json#/$defs/moduleEvidence"
+    },
     "repro": {
       "type": "object",
       "properties": {
@@ -47,6 +50,13 @@
               "type": "null"
             }
           ]
+        },
+        "reporterGodboltUrls": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/evidenceUrl"
+          },
+          "uniqueItems": true
         },
         "sourceUrl": {
           "anyOf": [

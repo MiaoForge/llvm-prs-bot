@@ -20,8 +20,8 @@ export const defaultGitHubOptions = {
   repository: 'llvm/llvm-project',
   labels: ['clang:frontend', 'clang:sema', 'clang:ast'],
   maxPages: 3,
-  maxPulls: 12,
-  maxIssues: 24,
+  maxPulls: 25,
+  maxIssues: 30,
   maxHistory: 6,
   timeoutMs: 15_000,
   requestBudget: 400,
@@ -279,31 +279,9 @@ export function createGitHubCollector(options = {}) {
       const pulls = await search('is:pr is:open', maxPulls)
       const issues = await search('is:issue is:open', maxIssues)
       const merged = await search('is:pr is:merged', maxHistory)
-      const prs = []
-      for (const pull of pulls) {
-        const observation = await collectPull(pull.number)
-        if (observation) prs.push(observation)
-      }
-      const reviewerHistory = []
-      for (const pull of merged) {
-        const path = `${root}/pulls/${pull.number}`
-        const files = await pages(`${path}/files`)
-        const reviews = await pages(`${path}/reviews`)
-        const paths = files.items.map((file) => file.filename)
-        for (const review of reviews.items.map(reviewEvent).filter(Boolean)) {
-          if (!review.isBot && review.reviewState !== 'dismissed')
-            reviewerHistory.push({
-              prId: pull.number,
-              login: review.actor,
-              isBot: false,
-              paths,
-              labels: labelNames(pull),
-              url: review.url,
-            })
-        }
-      }
       const reports = []
       for (const match of issues) {
+        if (remaining < 1 + maxPages) break
         const path = `${root}/issues/${match.number}`
         const { data: issue } = await request(path)
         if (issue.state !== 'open' || issue.pull_request) continue
@@ -314,6 +292,39 @@ export function createGitHubCollector(options = {}) {
           githubSyncedAt,
         )
         if (report.moduleIds.length) reports.push(report)
+      }
+      const prs = []
+      for (const pull of pulls) {
+        // Reserve enough requests to finish a PR, including branch rules and ancestry.
+        if (remaining < 8 * maxPages + 4) break
+        const observation = await collectPull(pull.number)
+        if (observation) prs.push(observation)
+      }
+      const reviewerHistory = []
+      for (const pull of merged) {
+        const author = pull.user?.login?.toLowerCase()
+        if (!author) continue
+        if (remaining < 2 * maxPages) break
+        const path = `${root}/pulls/${pull.number}`
+        const files = await pages(`${path}/files`)
+        const reviews = await pages(`${path}/reviews`)
+        const paths = files.items.map((file) => file.filename)
+        for (const review of reviews.items.map(reviewEvent).filter(Boolean)) {
+          if (
+            !review.isBot &&
+            review.reviewState !== 'dismissed' &&
+            review.actor.toLowerCase() !== author
+          )
+            reviewerHistory.push({
+              prId: pull.number,
+              login: review.actor,
+              author,
+              isBot: false,
+              paths,
+              labels: labelNames(pull),
+              url: review.url,
+            })
+        }
       }
       return { prs, issues: reports, reviewerHistory }
     },

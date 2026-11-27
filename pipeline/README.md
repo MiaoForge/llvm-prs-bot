@@ -33,9 +33,9 @@ and the same per-run budget applies.
 | `UPSTREAM_GITHUB_REPOSITORY` | `llvm/llvm-project` |
 | `GITHUB_MODULE_LABELS` | `clang:frontend,clang:sema,clang:ast` |
 | `GITHUB_TOKEN` | Optional token with read access |
-| `GITHUB_MAX_PAGES` / `GITHUB_MAX_PRS` / `GITHUB_MAX_ISSUES` / `GITHUB_MAX_HISTORY` | 3 / 12 / 24 / 6 |
+| `GITHUB_MAX_PAGES` / `GITHUB_MAX_PRS` / `GITHUB_MAX_ISSUES` / `GITHUB_MAX_HISTORY` | 3 / 25 / 30 / 6 |
 | `GITHUB_REQUEST_BUDGET` / `GITHUB_TIMEOUT_MS` | 400 / 15,000 |
-| `MAX_REVERIFY_PER_RUN` | 4 issue comparisons |
+| `MAX_REVERIFY_PER_RUN` | 6 issue comparisons |
 | `COMPILER_EXPLORER_REQUEST_BUDGET` / `COMPILER_EXPLORER_TIMEOUT_MS` | Two catalog requests plus two requests per allowed issue / 15,000 |
 | `CLANG_BASELINE_ID` / `CLANG_TRUNK_ID` | Latest stable Clang 22 for C++ / `clang_trunk` |
 | `CLANG_C_BASELINE_ID` / `CLANG_C_TRUNK_ID` | Latest stable Clang 22 for C / `cclang_trunk` |
@@ -44,6 +44,9 @@ An explicitly reported Clang version takes precedence over the default.
 Major-only declarations can match the latest stable release of that major.
 A specific release requires a matching catalog entry. The sample data uses
 synthetic Clang 22.1.0 observations.
+
+GitHub requests are serial. Collection stops between records when the
+remaining request budget cannot cover a complete record at the page limit.
 
 The collector preserves the GitHub creation timestamp for migrated Bugzilla
 issues unless the report supplies an explicit original date. A pull request
@@ -87,7 +90,8 @@ commit events with `isPush: true` only for observed pushes. Git commit
 metadata can identify the current SHA, but its timestamp is not evidence of
 PR activity.
 `reviewerHistory` contains prior reviews with `prId`, `login`,
-`isBot`, `paths`, optional `labels`, and the review `url`. Suggestions favor
+`isBot`, the historical PR `author`, `paths`, optional `labels`, and the review
+`url`. A historical PR author's own replies are excluded. Suggestions favor
 exact touched paths over module-only matches and count each historical PR once
 per reviewer.
 

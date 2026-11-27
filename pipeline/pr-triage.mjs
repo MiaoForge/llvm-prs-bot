@@ -1,4 +1,4 @@
-import { clangModules, classifyModules } from './modules.mjs'
+import { clangModules, classifyModules, matchModuleEvidence } from './modules.mjs'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 const DECISIVE_REVIEWS = new Set(['approved', 'changes-requested', 'dismissed'])
@@ -47,7 +47,13 @@ function suggestReviewers(pr, moduleIds, history, modules, limit) {
   const candidates = new Map()
   for (const record of history) {
     const login = record.login.toLowerCase()
-    if (record.isBot || excluded.has(login) || record.prId === pr.id) continue
+    if (
+      record.isBot ||
+      excluded.has(login) ||
+      record.prId === pr.id ||
+      record.author?.toLowerCase() === login
+    )
+      continue
     const exactPath = record.paths.some((path) => touched.has(path))
     const sharedModule = classifyModules(record, modules).some((id) => moduleIds.includes(id))
     if (!exactPath && !sharedModule) continue
@@ -91,7 +97,8 @@ export function triagePr(
   { now, inactivityDays = 180, modules = clangModules, reviewerHistory = [], reviewerLimit = 3 },
 ) {
   const pr = { paths: [], labels: [], events: [], checks: [], requestedReviewers: [], ...input }
-  const moduleIds = classifyModules(pr, modules)
+  const moduleEvidence = matchModuleEvidence(pr, modules)
+  const moduleIds = moduleEvidence.map((evidence) => evidence.moduleId)
   if (moduleIds.length === 0) return null
 
   const { id, title, url, author, createdAt, headSha, requestedReviewers } = pr
@@ -229,6 +236,7 @@ export function triagePr(
     createdAt,
     headSha,
     moduleIds,
+    moduleEvidence,
     requestedReviewers,
     headReview,
     headCi,

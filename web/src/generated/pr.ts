@@ -37,6 +37,20 @@ export interface PrDetail {
   mergeHelpRequested: boolean
   schemaVersion: 1
   snapshotId: string
+  /**
+   * @minItems 1
+   */
+  moduleEvidence?: {
+    moduleId: string
+    /**
+     * @minItems 1
+     */
+    matchedPaths?: string[]
+    /**
+     * @minItems 1
+     */
+    matchedLabels?: string[]
+  }[]
   reasonEvidenceUrls: string[]
   requestedReviewers: {
     login: string

@@ -10,6 +10,9 @@
     "snapshotId": {
       "$ref": "common.schema.json#/$defs/snapshotId"
     },
+    "moduleEvidence": {
+      "$ref": "common.schema.json#/$defs/moduleEvidence"
+    },
     "reasonEvidenceUrls": {
       "type": "array",
       "items": {

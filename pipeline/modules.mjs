@@ -13,13 +13,26 @@ export const clangModules = [
   },
 ]
 
-export function classifyModules({ paths = [], labels = [] }, modules = clangModules) {
-  const normalizedLabels = new Set(labels.map((label) => label.trim().toLowerCase()))
+export function matchModuleEvidence({ paths = [], labels = [] }, modules = clangModules) {
+  const uniquePaths = [...new Set(paths)].sort()
+  const uniqueLabels = [...new Set(labels)].sort()
   return modules
-    .filter(
-      (module) =>
-        module.paths.some((pattern) => paths.some((path) => pattern.test(path))) ||
-        module.labels.some((label) => normalizedLabels.has(label)),
-    )
-    .map((module) => module.id)
+    .map((module) => {
+      const matchedPaths = uniquePaths.filter((path) =>
+        module.paths.some((pattern) => pattern.test(path)),
+      )
+      const matchedLabels = uniqueLabels.filter((label) =>
+        module.labels.includes(label.trim().toLowerCase()),
+      )
+      return {
+        moduleId: module.id,
+        ...(matchedPaths.length ? { matchedPaths } : {}),
+        ...(matchedLabels.length ? { matchedLabels } : {}),
+      }
+    })
+    .filter((evidence) => evidence.matchedPaths || evidence.matchedLabels)
+}
+
+export function classifyModules(observation, modules) {
+  return matchModuleEvidence(observation, modules).map((evidence) => evidence.moduleId)
 }

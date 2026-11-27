@@ -1,4 +1,4 @@
-import { classifyModules } from './modules.mjs'
+import { matchModuleEvidence } from './modules.mjs'
 import { extractReproducer } from './reproducer.mjs'
 
 export function isBot(user) {
@@ -190,7 +190,7 @@ export function normalizeIssue(issue, comments, githubSyncedAt) {
   const extraction = extractReproducer(issue.body ?? '', issue.title)
   const paths =
     (issue.body ?? '').match(/\bclang\/(?:lib|include\/clang|test)\/[A-Za-z0-9_./-]+/g) ?? []
-  const moduleIds = classifyModules({ labels, paths })
+  const moduleEvidence = matchModuleEvidence({ labels, paths })
   const humanComment = comments
     .filter((comment) => isHuman(comment.user) && comment.created_at)
     .sort((left, right) => Date.parse(left.created_at) - Date.parse(right.created_at))
@@ -200,7 +200,8 @@ export function normalizeIssue(issue, comments, githubSyncedAt) {
     title: issue.title,
     url: issue.html_url,
     labels,
-    moduleIds,
+    moduleIds: moduleEvidence.map((evidence) => evidence.moduleId),
+    moduleEvidence,
     reporterIsBot: isHuman(issue.user) ? false : isBot(issue.user) ? true : undefined,
     originalReportAt: Number.isFinite(originalDate)
       ? new Date(originalDate).toISOString()

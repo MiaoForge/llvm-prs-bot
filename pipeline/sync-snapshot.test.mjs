@@ -133,6 +133,7 @@ function transports({
             ? '`clang -std=c17 example.c`'
             : '`clang++ -std=c++20 example.cpp`',
           'error: unexpected diagnostic',
+          'Compiler Explorer: https://godbolt.org/z/example',
           expectedWarning
             ? 'Expected behavior: should compile with a warning about unused variables'
             : 'Expected behavior: should compile',
@@ -198,6 +199,12 @@ test('runs the complete pipeline offline and budgets and persists comparisons ac
     ['insufficient-evidence', 'close-candidate'],
   )
   assert.equal(initial.input.prs[0].headCi.status, 'unknown')
+  const issue = initial.input.issues.find((entry) => entry.id === 2)
+  assert.deepEqual(issue.moduleEvidence, [
+    { moduleId: 'clang-sema', matchedLabels: ['clang:sema'] },
+  ])
+  assert.deepEqual(issue.repro.reporterGodboltUrls, ['https://godbolt.org/z/example'])
+  assert.equal(issue.runs.trunk.godboltUrl, null)
   assert.equal(
     validateSnapshot(output, { expectedSnapshotId: initial.input.snapshotId }).issueTotal,
     2,

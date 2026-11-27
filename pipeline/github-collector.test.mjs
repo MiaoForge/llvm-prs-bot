@@ -11,6 +11,7 @@ const head = 'a'.repeat(40)
 const previous = 'b'.repeat(40)
 const human = { login: 'author', type: 'User' }
 const reviewer = { login: 'reviewer', type: 'User' }
+const historicalAuthor = { login: 'historical-author', type: 'User' }
 const bot = { login: 'ci[bot]', type: 'Bot' }
 const url = 'https://github.example.invalid/llvm/project'
 const source = [
@@ -105,7 +106,16 @@ function githubTransport({
     if (path === '/search/issues') {
       const q = request.searchParams.get('q')
       const number = q.includes('is:merged') ? 3 : q.includes('is:issue') ? 2 : 1
-      return answer({ items: [{ number, updated_at: time, labels: pull.labels }] })
+      return answer({
+        items: [
+          {
+            number,
+            updated_at: time,
+            labels: pull.labels,
+            user: number === 3 ? historicalAuthor : human,
+          },
+        ],
+      })
     }
     if (path === '/pulls/1') return answer(pull)
     if (/^\/pulls\/[13]\/files$/.test(path)) {
@@ -138,7 +148,11 @@ function githubTransport({
         ],
         incomplete,
       )
-    if (path === '/pulls/3/reviews') return answer([review('APPROVED', reviewer, previous)])
+    if (path === '/pulls/3/reviews')
+      return answer([
+        review('COMMENTED', { ...historicalAuthor, login: 'Historical-Author' }, previous),
+        review('APPROVED', reviewer, previous),
+      ])
     if (path === '/issues/1/timeline') return answer([], activityPage === 'timeline')
     if (path === '/issues/1/comments')
       return answer(
@@ -194,9 +208,54 @@ test('collects paginated observations, exact SHA distances, current checks and r
   assert.equal(pr.headCi.status, 'failing')
   assert.notEqual(pr.headReview.status, 'approved')
   assert.equal(pr.mergeHelpRequested, true)
+  assert.deepEqual(
+    reviewerHistory.map((entry) => entry.login),
+    [reviewer.login],
+  )
   assert.equal(pr.suggestedReviewers[0].login, reviewer.login)
+  assert.deepEqual(pr.moduleEvidence, [
+    { moduleId: 'clang-sema', matchedPaths: ['clang/lib/Sema/Decl.cpp'] },
+    { moduleId: 'clang-ast', matchedPaths: ['clang/lib/AST/Context.cpp'] },
+  ])
   assert.ok(transport.paths.some(([path, page]) => path === '/pulls/1/files' && page === '2'))
   assert.equal(issues[0].declaredVersion, '21.1.0')
+  assert.deepEqual(issues[0].moduleEvidence, [
+    { moduleId: 'clang-sema', matchedLabels: ['clang:sema'] },
+  ])
+})
+
+test('finishes issue records before spending the remaining budget on PRs', async () => {
+  const transport = githubTransport()
+  const collector = createGitHubCollector({
+    repository: 'llvm/project',
+    labels: ['clang:frontend'],
+    token: 'fixture',
+    baseUrl: 'https://github.example.invalid/',
+    fetchImpl: transport.fetchImpl,
+    maxHistory: 0,
+    maxPages: 1,
+    requestBudget: 8,
+  })
+  const { prs, issues } = await collector.collect(time)
+  assert.deepEqual(prs, [])
+  assert.equal(issues.length, 1)
+  assert.equal(transport.paths.length, 4)
+})
+
+test('extracts reporter Compiler Explorer URLs without treating them as compile inputs', () => {
+  const report = extractReproducer(
+    [
+      '[short link](https://godbolt.org/z/example), <https://compiler-explorer.com/#state=(x)>',
+      'https://godbolt.org/z/example. http://godbolt.org/z/insecure',
+      'https://godbolt.org.evil.invalid/z/one https://godbolt.org@other.invalid/z/two',
+    ].join('\n'),
+  )
+  assert.deepEqual(report.repro.reporterGodboltUrls, [
+    'https://godbolt.org/z/example',
+    'https://compiler-explorer.com/#state=(x)',
+  ])
+  assert.equal(report.repro.sourceCode, null)
+  assert.equal(report.repro.compileArgs, null)
 })
 
 test('keeps force-push distances and incomplete review observations unknown', async () => {

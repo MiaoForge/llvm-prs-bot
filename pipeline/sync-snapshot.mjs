@@ -14,6 +14,7 @@ import { supportsCompileArgs } from './reproducer.mjs'
 
 const defaultOutput = fileURLToPath(new URL('../data/', import.meta.url))
 const stateVersion = 1
+const defaultMaxReverify = 6
 
 function fingerprint(issue, baseline, trunk) {
   return createHash('sha256')
@@ -56,7 +57,7 @@ export async function prepareSnapshot({
   previousState,
   now,
   snapshotId,
-  maxReverify = 4,
+  maxReverify = defaultMaxReverify,
   baselineId,
   trunkId,
   cBaselineId,
@@ -219,7 +220,7 @@ async function main() {
     },
   })
   const repository = process.env.UPSTREAM_GITHUB_REPOSITORY || defaultGitHubOptions.repository
-  const maxReverify = integer('MAX_REVERIFY_PER_RUN', 4)
+  const maxReverify = integer('MAX_REVERIFY_PER_RUN', defaultMaxReverify)
   const now = new Date().toISOString()
   const labels = (process.env.GITHUB_MODULE_LABELS || '')
     .split(',')

@@ -54,6 +54,9 @@ export function verifyIssue(record) {
     compileArgs: record.repro?.compileArgs ?? null,
     expectedBehavior: record.repro?.expectedBehavior ?? null,
     sourceUrl: record.repro?.sourceUrl ?? null,
+    ...(record.repro?.reporterGodboltUrls?.length
+      ? { reporterGodboltUrls: record.repro.reporterGodboltUrls }
+      : {}),
   }
   const baseline = record.runs?.baseline ?? null
   const trunk = record.runs?.trunk ?? null
@@ -86,6 +89,7 @@ export function verifyIssue(record) {
     title,
     url,
     moduleIds,
+    ...(record.moduleEvidence?.length ? { moduleEvidence: record.moduleEvidence } : {}),
     originalReportAt,
     githubSyncedAt,
     source,

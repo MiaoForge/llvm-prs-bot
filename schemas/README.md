@@ -50,6 +50,9 @@ conclusion. `generatedByFuzzer` counts a source independently of conclusions.
   descending order. Queue explanations may link to their evidence through
   `reasonEvidenceUrls`.
 
+PR and issue details can include `moduleEvidence`, with one entry per
+assigned module and the matched paths or labels that explain its assignment.
+
 ## Issue verification
 
 - `source` captures provenance, including `generated-by-fuzzer`, and
@@ -62,6 +65,8 @@ conclusion. `generatedByFuzzer` counts a source independently of conclusions.
   array denotes a known invocation with no explicit arguments. Each non-null
   run records the actual compiler ID and version, integer exit code, raw
   diagnostics, symptom comparison outcome, and a Godbolt URL when available.
+  `reporterGodboltUrls` preserves Compiler Explorer links from the original
+  report separately from links to recorded verification runs.
 - A close candidate reproduced the reported symptom on the baseline and
   met the expected behavior on trunk. A still-reproducible issue showed the
   reported symptom on both runs. A passing trunk run with an unverified baseline
