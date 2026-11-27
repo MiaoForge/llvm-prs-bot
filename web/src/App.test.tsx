@@ -389,7 +389,7 @@ describe('static workbench', () => {
     )
   })
 
-  it('shows observed check counts separately from unknown HEAD CI and names matched PR paths', async () => {
+  it('shows required check results alongside unknown HEAD CI and names matched PR paths', async () => {
     const headCi = { ...pr101.headCi, status: 'unknown' }
     const statuses = ['passing', 'passing', 'failing', 'pending', 'unknown']
     const matchedPath = 'clang/lib/Sema/SemaDecl.cpp'
@@ -424,14 +424,45 @@ describe('static workbench', () => {
     const ci = within(ciFact)
     expect(ci.getByText('Unknown')).toBeTruthy()
     expect(
-      ci.getByText('Observed checks: 2 passed · 1 failed · 1 pending · 1 unknown'),
+      ci.getByText('Required checks: 2 passed · 1 failed · 1 pending · 1 result unknown'),
     ).toBeTruthy()
-    expect(ci.getByText('Required-check coverage unknown')).toBeTruthy()
     const evidence = within(detail.getByRole('region', { name: 'Module Evidence' }))
     expect(evidence.getByText('Clang / Sema')).toBeTruthy()
     expect(evidence.getByText('Clang / AST')).toBeTruthy()
     expect(evidence.getByText(matchedPath)).toBeTruthy()
     expect(evidence.getByText('clang:sema')).toBeTruthy()
+  })
+
+  it('shows unknown results when required checks have no recorded runs', async () => {
+    const headCi = { ...pr101.headCi, status: 'unknown' }
+    mockFetch((path) => {
+      if (path.endsWith('/prs-index.json')) {
+        return json({
+          ...prIndex,
+          items: prIndex.items.map((pr) => (pr.id === pr101.id ? { ...pr, headCi } : pr)),
+        })
+      }
+      if (path.endsWith('/pr-101.json')) {
+        return json({
+          ...pr101,
+          headCi,
+          requiredChecks: ['build', 'test'].map((name) => ({
+            name,
+            commitSha: pr101.headSha,
+            status: 'unknown',
+            url: null,
+          })),
+        })
+      }
+    })
+    open('#/prs?module=clang-sema&item=101')
+    const detail = within(await screen.findByRole('region', { name: 'Pull request details' }))
+    const ciFact = (await detail.findByText('CI at HEAD')).parentElement
+    if (ciFact === null) throw new Error('Missing CI fact container')
+    const ci = within(ciFact)
+    expect(ci.getByText('Unknown')).toBeTruthy()
+    expect(ci.getByText('Required checks: 2 results unknown')).toBeTruthy()
+    expect(ci.queryByText(/observed|coverage/i)).toBeNull()
   })
 
   it('compacts the compiler version in the sidebar and overview while keeping the original title', async () => {

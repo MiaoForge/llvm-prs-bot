@@ -193,14 +193,14 @@ function PrInspector({
   return <PrEvidence pr={detail.data} modules={summary.modules} />
 }
 
-function observedCheckSummary(checks: PrDetail['requiredChecks']) {
+function requiredCheckSummary(checks: PrDetail['requiredChecks']) {
   const counts = { passing: 0, failing: 0, pending: 0, unknown: 0 }
   for (const { status } of checks) counts[status]++
   return [
     counts.passing && `${counts.passing} passed`,
     counts.failing && `${counts.failing} failed`,
     counts.pending && `${counts.pending} pending`,
-    counts.unknown && `${counts.unknown} unknown`,
+    counts.unknown && `${counts.unknown} ${counts.unknown === 1 ? 'result' : 'results'} unknown`,
   ]
     .filter(Boolean)
     .join(' · ')
@@ -217,8 +217,7 @@ function PrEvidence({ pr, modules }: { pr: PrDetail; modules: Summary['modules']
     pr.headCi.status === 'unknown' && pr.requiredChecks.length > 0 ? (
       <>
         {sha(pr.headCi.commitSha)}
-        <span className="block">Observed checks: {observedCheckSummary(pr.requiredChecks)}</span>
-        <span className="block">Required-check coverage unknown</span>
+        <span className="block">Required checks: {requiredCheckSummary(pr.requiredChecks)}</span>
       </>
     ) : (
       sha(pr.headCi.commitSha)
