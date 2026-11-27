@@ -331,6 +331,7 @@ test('uses the C catalog and excludes unsupported expectations and broad-only PR
   const valid = await sync(output, 27, { cIssue: true, coarseOnlyPr: true })
   assert.deepEqual(valid.compilations, ['cclang2212', 'cclang_trunk'])
   assert.equal(valid.input.issues.find((issue) => issue.id === 2)?.conclusion, 'close-candidate')
+  assert.equal(valid.input.issues.find((issue) => issue.id === 2)?.repro.language, 'c')
   assert.equal(
     JSON.parse(readFileSync(join(output, 'summary.json'), 'utf8')).modules.find(
       (entry) => entry.id === 'clang-sema',
@@ -343,6 +344,7 @@ test('uses the C catalog and excludes unsupported expectations and broad-only PR
     warning.input.issues.find((issue) => issue.id === 2)?.conclusion,
     'insufficient-evidence',
   )
+  assert.equal(warning.input.issues.find((issue) => issue.id === 2)?.repro.language, 'c')
 })
 
 test('hydrates diagnostic shortlinks and skips automated compilation for crash or fuzzer issues', async (context) => {

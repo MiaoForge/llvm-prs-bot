@@ -45,6 +45,7 @@ export interface IssueDetail {
     sourceCode: string | null
     compileArgs: string[] | null
     expectedBehavior: string | null
+    language?: 'c' | 'c++'
     reporterGodboltUrls?: string[]
     sourceUrl: string | null
   }

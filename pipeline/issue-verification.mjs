@@ -52,11 +52,13 @@ export function verifyIssue(record) {
   const { id, title, url, moduleIds, originalReportAt, githubSyncedAt } = record
   const source = issueSource(record)
   const kind = record.kind ?? 'unknown'
+  const language = record.language ?? record.repro?.language
   const repro = {
     sourceCode: record.repro?.sourceCode ?? null,
     compileArgs: record.repro?.compileArgs ?? null,
     expectedBehavior: record.repro?.expectedBehavior ?? null,
     sourceUrl: record.repro?.sourceUrl ?? null,
+    ...(language === 'c' || language === 'c++' ? { language } : {}),
     ...(record.repro?.reporterGodboltUrls?.length
       ? { reporterGodboltUrls: record.repro.reporterGodboltUrls }
       : {}),

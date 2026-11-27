@@ -415,6 +415,83 @@ describe('static workbench', () => {
     expect(detail.queryByRole('link', { name: 'Open in Godbolt' })).toBeNull()
   })
 
+  it('preserves extracted C language in fallback Open in Godbolt links', async () => {
+    mockFetch((path) =>
+      path.endsWith('/issue-204.json')
+        ? json({
+            ...issue204,
+            repro: {
+              ...issue204.repro,
+              sourceCode: 'int class;\n',
+              compileArgs: ['-Wall'],
+              language: 'c',
+            },
+          })
+        : undefined,
+    )
+    open('#/issues?module=clang-sema&item=204')
+    const detail = within(await screen.findByRole('region', { name: 'Issue details' }))
+    const explicitHref = (
+      await detail.findByRole('link', { name: 'Open in Godbolt' })
+    ).getAttribute('href')
+    expect(explicitHref).toMatch(/^https:\/\/godbolt\.org\/clientstate\//)
+    expect(
+      JSON.parse(
+        Buffer.from(
+          decodeURIComponent((explicitHref ?? '').slice('https://godbolt.org/clientstate/'.length)),
+          'base64',
+        ).toString('utf8'),
+      ),
+    ).toEqual({
+      sessions: [
+        {
+          id: 1,
+          language: 'c',
+          source: 'int class;\n',
+          compilers: [{ id: 'cclang_trunk', options: '-Wall' }],
+        },
+      ],
+    })
+  })
+
+  it('infers C from iso9899 flags when older snapshots omit repro.language', async () => {
+    mockFetch((path) =>
+      path.endsWith('/issue-204.json')
+        ? json({
+            ...issue204,
+            repro: {
+              ...issue204.repro,
+              sourceCode: 'int class;\n',
+              compileArgs: ['-std=iso9899:1999'],
+            },
+          })
+        : undefined,
+    )
+    open('#/issues?module=clang-sema&item=204')
+    const detail = within(await screen.findByRole('region', { name: 'Issue details' }))
+    const inferredHref = (
+      await detail.findByRole('link', { name: 'Open in Godbolt' })
+    ).getAttribute('href')
+    expect(inferredHref).toMatch(/^https:\/\/godbolt\.org\/clientstate\//)
+    expect(
+      JSON.parse(
+        Buffer.from(
+          decodeURIComponent((inferredHref ?? '').slice('https://godbolt.org/clientstate/'.length)),
+          'base64',
+        ).toString('utf8'),
+      ),
+    ).toEqual({
+      sessions: [
+        {
+          id: 1,
+          language: 'c',
+          source: 'int class;\n',
+          compilers: [{ id: 'cclang_trunk', options: '-std=iso9899:1999' }],
+        },
+      ],
+    })
+  })
+
   it('shows required check results alongside unknown HEAD CI and names matched PR paths', async () => {
     const headCi = { ...pr101.headCi, status: 'unknown' }
     const statuses = ['passing', 'passing', 'failing', 'pending', 'unknown']

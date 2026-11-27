@@ -51,6 +51,10 @@
             }
           ]
         },
+        "language": {
+          "type": "string",
+          "enum": ["c", "c++"]
+        },
         "reporterGodboltUrls": {
           "type": "array",
           "items": {

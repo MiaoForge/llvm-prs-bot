@@ -288,6 +288,7 @@ function IssueEvidence({
     sourceCode,
     compileArgs,
     expectedBehavior,
+    language,
     sourceUrl,
     reporterGodboltUrls = [],
   } = issue.repro
@@ -296,7 +297,7 @@ function IssueEvidence({
   const godbolt =
     trunk?.godboltUrl ??
     baseline?.godboltUrl ??
-    (sourceCode !== null ? buildGodboltUrl({ sourceCode, compileArgs }) : null)
+    (sourceCode !== null ? buildGodboltUrl({ sourceCode, compileArgs, language }) : null)
   return (
     <>
       <header className="ins-head">
