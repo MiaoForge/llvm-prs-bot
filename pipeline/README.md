@@ -4,9 +4,11 @@
 
 Use Node.js 24. Live synchronization defaults to `llvm/llvm-project` and
 the `clang:frontend`, `clang:sema` and `clang:ast` labels. Label matches are
-combined across searches. Each run refreshes a bounded, recently updated
-window of open PRs and issues and samples recently merged PRs for reviewer
-evidence. This window is not a full inventory of LLVM's backlog.
+combined across searches. The broad `clang:frontend` label discovers candidates.
+Module membership requires a matching path or a specific module label. Each
+run refreshes a bounded, recently updated window of open PRs and issues and
+samples recently merged PRs for reviewer evidence. The summary declares this
+coverage as `bounded-sample`.
 
 ```sh
 npm ci --prefix pipeline
@@ -18,7 +20,8 @@ node pipeline/sync-snapshot.mjs --dry-run
 The default output is `data/`. Dry runs query upstream and the compiler
 catalog but skip compilation and leave both the snapshot and state untouched.
 Keep the optional state file outside the published data directory. It stores
-the last synchronization time and cached comparisons for the observed window.
+the last synchronization time and cached comparisons, including evidence for
+issues outside the current window.
 The next run reuses comparisons with unchanged issue inputs and compiler
 versions. If either changes, it queues a recheck and shows insufficient
 evidence until a fresh comparison is available. Least recently attempted
@@ -34,7 +37,8 @@ and the same per-run budget applies.
 | `GITHUB_REQUEST_BUDGET` / `GITHUB_TIMEOUT_MS` | 400 / 15,000 |
 | `MAX_REVERIFY_PER_RUN` | 4 issue comparisons |
 | `COMPILER_EXPLORER_REQUEST_BUDGET` / `COMPILER_EXPLORER_TIMEOUT_MS` | Two catalog requests plus two requests per allowed issue / 15,000 |
-| `CLANG_BASELINE_ID` / `CLANG_TRUNK_ID` | Latest stable Clang 22 / `clang_trunk` |
+| `CLANG_BASELINE_ID` / `CLANG_TRUNK_ID` | Latest stable Clang 22 for C++ / `clang_trunk` |
+| `CLANG_C_BASELINE_ID` / `CLANG_C_TRUNK_ID` | Latest stable Clang 22 for C / `cclang_trunk` |
 
 An explicitly reported Clang version takes precedence over the default.
 Major-only declarations can match the latest stable release of that major.
@@ -50,6 +54,7 @@ one single-file compile invocation or a flags line, and explicitly stated
 behavior. Other inputs remain visible with evidence gaps. Only supported
 portable compile options are submitted to Compiler Explorer.
 
+Compound expectations that cannot be fully checked remain evidence gaps.
 The rules consume normalized records. The collector marks upstream coverage
 before applying them. Rules operate on passed-in observations and timestamps
 and can be tested without network access.
@@ -76,8 +81,11 @@ relative to the current HEAD.
 
 Pass a fixed `now` for inactivity calculations. The threshold defaults to
 180 days. Set `authorIsBot: false` when a human opened the PR. Creation then
-counts as human activity when the timeline has no human events. Without a
-known human activity timestamp, the PR is excluded from the inactivity queue.
+counts as human activity when the timeline has no human events. Inactivity
+requires complete review, comment, commit and timeline pagination. Mark
+commit events with `isPush: true` only for observed pushes. Git commit
+metadata can identify the current SHA, but its timestamp is not evidence of
+PR activity.
 `reviewerHistory` contains prior reviews with `prId`, `login`,
 `isBot`, `paths`, optional `labels`, and the review `url`. Suggestions favor
 exact touched paths over module-only matches and count each historical PR once

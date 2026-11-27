@@ -59,6 +59,8 @@ export async function prepareSnapshot({
   maxReverify = 4,
   baselineId,
   trunkId,
+  cBaselineId,
+  cTrunkId,
   dryRun = false,
 }) {
   if (!Number.isSafeInteger(maxReverify) || maxReverify < 0) {
@@ -69,7 +71,7 @@ export async function prepareSnapshot({
     previousState?.version === stateVersion && previousState.repository === repository
       ? previousState.issues
       : {}
-  const issues = {}
+  const issues = { ...cached }
   const warnings = []
   const catalogs = new Map()
   async function catalog(language) {
@@ -91,9 +93,10 @@ export async function prepareSnapshot({
     const eligible = canVerify(issue)
     const available = eligible ? await catalog(issue.language) : []
     const resolved = selectClangCompilers(available ?? [], {
+      language: issue.language,
       declaredVersion: issue.declaredVersion,
-      baselineId,
-      trunkId,
+      baselineId: issue.language === 'c' ? cBaselineId : baselineId,
+      trunkId: issue.language === 'c' ? cTrunkId : trunkId,
     })
     const digest = fingerprint(issue, resolved.baseline, resolved.trunk)
     const previous = cached?.[issue.id]
@@ -155,6 +158,10 @@ export async function prepareSnapshot({
     generatedAt: now,
     githubSyncedAt: now,
     trunkCompilerVersion,
+    coverage: {
+      mode: 'bounded-sample',
+      note: 'Recently updated open PRs and issues sampled by GitHub label and collection limits. Counts cover only items classified into the tracked modules.',
+    },
     prs: observations.prs
       .map((pr) => triagePr(pr, { now, reviewerHistory: observations.reviewerHistory }))
       .filter(Boolean),
@@ -246,6 +253,8 @@ async function main() {
     dryRun: values['dry-run'],
     baselineId: process.env.CLANG_BASELINE_ID,
     trunkId: process.env.CLANG_TRUNK_ID || undefined,
+    cBaselineId: process.env.CLANG_C_BASELINE_ID,
+    cTrunkId: process.env.CLANG_C_TRUNK_ID,
   })
   if (values.state && !values['dry-run']) writeState(values.state, state)
   for (const warning of warnings) console.warn(warning)

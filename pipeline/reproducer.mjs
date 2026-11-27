@@ -79,6 +79,45 @@ function declaredVersions(text) {
   return [...new Set(versions)]
 }
 
+function expectedText(lines) {
+  const label = /^(?:#{1,6}[ \t]*)?Expected(?:[ \t]+(?:behavior|output|result))?[ \t]*:[ \t]*(.*)$/i
+  const index = lines.findIndex((line) => label.test(line))
+  if (index === -1) return null
+  const text = [label.exec(lines[index])[1].trim()].filter(Boolean)
+  for (const line of lines.slice(index + 1)) {
+    const trimmed = line.trim()
+    if (
+      /^(?:#|(?:Actual|Observed|Version|Flags|Command|Reproduction)(?: behavior| output| result)?\s*:)/i.test(
+        trimmed,
+      )
+    )
+      break
+    if (trimmed) text.push(trimmed)
+  }
+  return text.length ? text.join('\n') : null
+}
+
+function expectedConditions(text, kind) {
+  if (!text) return {}
+  // Recognize complete statements. Matching only a prefix can discard a
+  // diagnostic or warning that is part of the requested behavior.
+  if (
+    /^(?:should compile(?: successfully)?|compiles successfully|accepts? (?:the )?(?:code|program|input))\.?$/i.test(
+      text,
+    )
+  ) {
+    return { exitCode: 0 }
+  }
+  if (
+    kind === 'crash' &&
+    /^(?:no crash|(?:the compiler )?should not crash|safe termination)\.?$/i.test(text)
+  ) {
+    return { noCrash: true }
+  }
+  const diagnostic = /^\x60((?:fatal )?error: [^\x60\n]+)\x60$/i.exec(text)
+  return diagnostic ? { diagnosticIncludes: diagnostic[1] } : {}
+}
+
 export function extractReproducer(body = '', title = '') {
   const markdown = body.replaceAll('\r\n', '\n')
   const fences = [...markdown.matchAll(fencePattern)]
@@ -91,10 +130,7 @@ export function extractReproducer(body = '', title = '') {
   const invocations = lines.map(invocation).filter((args) => args !== null)
   const distinctArgs = new Map(invocations.map((args) => [JSON.stringify(args), args]))
   const compileArgs = distinctArgs.size === 1 ? distinctArgs.values().next().value : null
-  const expectedBehavior =
-    /^(?:#{1,6}[ \t]*)?Expected(?:[ \t]+(?:behavior|output|result))?[ \t]*:[ \t]*(?:\n[ \t]*){0,2}([^#\s`~][^\n]*)/im
-      .exec(prose)?.[1]
-      ?.trim() ?? null
+  const expectedBehavior = expectedText(lines)
   const crashSignature = extractCrashSignature(prose) ?? extractCrashSignature(title)
   const kind =
     crashSignature || /\b(?:crash(?:es|ed)?|assertion)\b/i.test(title)
@@ -106,19 +142,7 @@ export function extractReproducer(body = '', title = '') {
     .exec(prose)?.[1]
     ?.trim()
   const reported = crashSignature ?? (kind === 'diagnostic' ? diagnostic : null)
-  const expectedExit =
-    /\b(?:should compile|compiles successfully|accepts? (?:the )?(?:code|program|input)|successfully compil)/i.test(
-      expectedBehavior ?? '',
-    )
-      ? 0
-      : undefined
-  const expectedDiagnostic = /\berror:\s*(\S.*)/i.exec(expectedBehavior ?? '')?.[1]?.trim()
   const versions = declaredVersions(prose)
-  const expectsNoCrash =
-    kind === 'crash' &&
-    /\b(?:no crash|without crashing|should not crash|safe termination)\b/i.test(
-      expectedBehavior ?? '',
-    )
   return {
     kind,
     language: source ? languages.get(source[2].toLowerCase()) : null,
@@ -128,13 +152,7 @@ export function extractReproducer(body = '', title = '') {
     repro: { sourceCode: source?.[3]?.trim() ? source[3] : null, compileArgs, expectedBehavior },
     expectations: {
       reported: reported ? { diagnosticIncludes: reported } : {},
-      expected: expectedDiagnostic
-        ? { diagnosticIncludes: expectedDiagnostic }
-        : expectedExit === 0
-          ? { exitCode: 0 }
-          : expectsNoCrash
-            ? { noCrash: true }
-            : {},
+      expected: expectedConditions(expectedBehavior, kind),
     },
   }
 }

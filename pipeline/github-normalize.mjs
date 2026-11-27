@@ -13,9 +13,6 @@ export function labelNames(item) {
   return (item.labels ?? []).map((label) => (typeof label === 'string' ? label : label.name))
 }
 
-export const githubModules = (labels) =>
-  labels.map((label) => (label === 'clang:frontend' ? 'clang:sema' : label))
-
 const reviewStates = {
   APPROVED: 'approved',
   CHANGES_REQUESTED: 'changes-requested',
@@ -82,6 +79,9 @@ export function normalizePull(pull, observations) {
     requiredChecksComplete,
     distance,
     reviewsComplete,
+    commentsComplete,
+    commitsComplete,
+    timelineComplete,
   } = observations
   const events = reviews.map(reviewEvent).filter(Boolean)
   // Git commit timestamps describe the commit, not when it reached this PR.
@@ -91,6 +91,7 @@ export function normalizePull(pull, observations) {
     events.push({
       at: push.created_at,
       kind: 'commit',
+      isPush: true,
       actor: push.actor.login,
       isBot: !isHuman(push.actor),
       description: 'Updated the pull request head.',
@@ -99,11 +100,10 @@ export function normalizePull(pull, observations) {
     })
   }
   for (const entry of commits) {
-    const author = entry.committer ?? entry.author
-    const associated = entry.author?.login === pull.user.login
+    const committer = entry.committer
     const at = entry.commit?.committer?.date
     if (
-      !author?.login ||
+      !committer?.login ||
       !at ||
       !entry.html_url ||
       !entry.sha ||
@@ -113,9 +113,10 @@ export function normalizePull(pull, observations) {
     events.push({
       at,
       kind: 'commit',
-      actor: associated ? pull.user.login : author.login,
-      isBot: associated ? !isHuman(pull.user) || isBot(author) : !isHuman(author),
-      description: 'Commit recorded in the current pull request history.',
+      isPush: false,
+      actor: committer.login,
+      isBot: !isHuman(committer),
+      description: 'Git commit metadata (committer timestamp).',
       url: entry.html_url,
       commitSha: entry.sha,
     })
@@ -159,7 +160,7 @@ export function normalizePull(pull, observations) {
     authorIsBot: isHuman(pull.user) ? false : isBot(pull.user) ? true : undefined,
     createdAt: pull.created_at,
     headSha: pull.head.sha,
-    labels: githubModules(labelNames(pull)),
+    labels: labelNames(pull),
     paths: [
       ...new Set(files.flatMap((file) => [file.filename, file.previous_filename].filter(Boolean))),
     ],
@@ -167,6 +168,9 @@ export function normalizePull(pull, observations) {
     checks,
     requiredChecksComplete,
     reviewsComplete,
+    commentsComplete,
+    commitsComplete,
+    timelineComplete,
     requestedReviewers,
     mergeability:
       pull.mergeable === true ? 'mergeable' : pull.mergeable === false ? 'conflicting' : 'unknown',
@@ -184,7 +188,9 @@ export function normalizeIssue(issue, comments, githubSyncedAt) {
     )
   const originalDate = original && Date.parse(original[1])
   const extraction = extractReproducer(issue.body ?? '', issue.title)
-  const moduleIds = classifyModules({ labels: githubModules(labels) })
+  const paths =
+    (issue.body ?? '').match(/\bclang\/(?:lib|include\/clang|test)\/[A-Za-z0-9_./-]+/g) ?? []
+  const moduleIds = classifyModules({ labels, paths })
   const humanComment = comments
     .filter((comment) => isHuman(comment.user) && comment.created_at)
     .sort((left, right) => Date.parse(left.created_at) - Date.parse(right.created_at))

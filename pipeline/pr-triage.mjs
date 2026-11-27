@@ -96,10 +96,19 @@ export function triagePr(
 
   const { id, title, url, author, createdAt, headSha, requestedReviewers } = pr
   const events = [...pr.events].sort((left, right) => Date.parse(left.at) - Date.parse(right.at))
-  const human = events.filter((event) => !event.isBot)
+  const activityEvents = events.filter((event) => event.kind !== 'commit' || event.isPush === true)
+  const human = activityEvents.filter((event) => !event.isBot)
   const lastHuman = human.at(-1)
-  const lastHumanActivityAt = lastHuman?.at ?? (pr.authorIsBot === false ? createdAt : null)
-  const lastBot = events.findLast((event) => event.isBot)
+  const activityComplete = [
+    pr.reviewsComplete,
+    pr.commentsComplete,
+    pr.commitsComplete,
+    pr.timelineComplete,
+  ].every((complete) => complete === true)
+  const lastHumanActivityAt = activityComplete
+    ? (lastHuman?.at ?? (pr.authorIsBot === false ? createdAt : null))
+    : null
+  const lastBot = activityEvents.findLast((event) => event.isBot)
   const latestReview = effectiveReviews(events)
   const approval = latestReview.findLast(
     (review) => review.reviewState === 'approved' && review.commitSha,
@@ -129,10 +138,13 @@ export function triagePr(
   }
 
   const changes = latestReview.findLast((review) => review.reviewState === 'changes-requested')
-  const authorPush = human.findLast(
-    (event) =>
-      event.kind === 'commit' && event.commitSha === headSha && sameLogin(event.actor, author),
+  const headPush = activityEvents.findLast(
+    (event) => event.kind === 'commit' && event.isPush === true && event.commitSha === headSha,
   )
+  const authorPush =
+    headPush && !headPush.isBot && sameLogin(headPush.actor, author) ? headPush : null
+  const headEvidence =
+    events.findLast((event) => event.kind === 'commit' && event.commitSha === headSha)?.url ?? url
   const mergeHelp = human.findLast(
     (event) =>
       event.kind === 'comment' && event.mergeHelpRequested && sameLogin(event.actor, author),
@@ -148,36 +160,35 @@ export function triagePr(
       commitsSinceApproval === 0
         ? 'A review approved the current HEAD.'
         : commitsSinceApproval === null
-          ? 'A review approved an earlier revision. Its distance from HEAD is unknown.'
-          : `A review approved an earlier revision; HEAD is ${commitsSinceApproval} commit(s) ahead.`
+          ? `A review approved an earlier revision. The current HEAD is ${headSha}. Its distance from the approved revision is unknown.`
+          : `A review approved an earlier revision; HEAD ${headSha} is ${commitsSinceApproval} commit(s) ahead.`
     signals.push({
       queue: 'approved-follow-up',
       priority: 100,
       reason: approvalReason,
-      urls: [approval.url, authorPush?.url],
+      urls: [approval.url, headPush?.url ?? headEvidence],
     })
   }
-  const reviewedHeadAfterPush =
-    authorPush &&
-    human.some(
-      (event) =>
-        event.kind === 'review' &&
-        event.commitSha === headSha &&
-        Date.parse(event.at) >= Date.parse(authorPush.at),
-    )
+  const reviewedHead = human.some(
+    (event) =>
+      event.kind === 'review' &&
+      event.commitSha === headSha &&
+      (!headPush || Date.parse(event.at) >= Date.parse(headPush.at)),
+  )
   if (
-    changes &&
-    authorPush &&
-    changes.commitSha &&
+    pr.reviewsComplete &&
+    changes?.commitSha &&
     changes.commitSha !== headSha &&
-    Date.parse(authorPush.at) > Date.parse(changes.at) &&
-    !reviewedHeadAfterPush
+    (!headPush || Date.parse(headPush.at) > Date.parse(changes.at)) &&
+    !reviewedHead
   ) {
     signals.push({
       queue: 'awaiting-rereview',
       priority: 75,
-      reason: 'The author pushed the current HEAD after a request for changes.',
-      urls: [changes.url, authorPush.url],
+      reason: authorPush
+        ? 'The author pushed the current HEAD after a request for changes.'
+        : `Changes were requested on ${changes.commitSha}. The current HEAD is ${headSha}.`,
+      urls: [changes.url, headPush?.url ?? headEvidence],
     })
   }
   if (pr.reviewsComplete && !human.some((event) => event.kind === 'review')) {

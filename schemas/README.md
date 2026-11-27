@@ -22,6 +22,8 @@ and `snapshotId` identifies the published dataset. `generatedAt` is the
 publication time recorded by the producer. `githubSyncedAt` records the
 latest snapshot-level sync, and `trunkCompilerVersion` identifies the
 current verification target. Individual issues retain their own run versions.
+When present, `coverage` describes the population represented by the snapshot.
+Live sync emits `bounded-sample` with a note about the collection window.
 
 Each index contains the fields needed for the list, filters, and sorting.
 Details repeat those fields exactly and add evidence. A numbered entry has one

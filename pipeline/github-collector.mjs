@@ -268,6 +268,9 @@ export function createGitHubCollector(options = {}) {
       requiredChecksComplete: Boolean(policy.complete && runs?.complete && status?.complete),
       distance,
       reviewsComplete: reviews.complete,
+      commitsComplete: commits.complete && (pull.commits ?? 0) <= commits.items.length,
+      commentsComplete: comments.complete && (pull.comments ?? 0) <= comments.items.length,
+      timelineComplete: timeline?.complete === true,
     })
   }
 

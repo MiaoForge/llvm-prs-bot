@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { existsSync, mkdtempSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -30,6 +30,12 @@ const catalog = [
   release('clang2219assert', '22.1.9'),
   release('clang_trunk', '23.0.0git', 'nightly'),
 ]
+const cCatalog = [
+  release('cclang2110', '21.1.0'),
+  release('cclang2210', '22.1.0'),
+  release('cclang2212', '22.1.2'),
+  release('cclang_trunk', '23.0.0git', 'nightly'),
+]
 
 test('selects the newest stable Clang 22 and matches declared versions exactly', () => {
   const select = (declaredVersion, baselineId) =>
@@ -42,13 +48,39 @@ test('selects the newest stable Clang 22 and matches declared versions exactly',
   assert.equal(select(undefined, 'clang2210'), 'clang2210')
 })
 
+test('resolves release, declared version and overrides in each language catalog', () => {
+  for (const [language, entries, prefix] of [
+    ['c', cCatalog, 'cclang'],
+    ['c++', catalog, 'clang'],
+  ]) {
+    const pick = (options) => selectClangCompilers(entries, { language, ...options })
+    assert.equal(pick().baseline.id, `${prefix}2212`)
+    assert.equal(pick().trunk.id, `${prefix}_trunk`)
+    assert.equal(
+      pick({ declaredVersion: '21.1.0', baselineId: `${prefix}2210` }).baseline.id,
+      `${prefix}2110`,
+    )
+    const overridden = pick({ baselineId: `${prefix}2210`, trunkId: `${prefix}2110` })
+    assert.equal(overridden.baseline.id, `${prefix}2210`)
+    assert.equal(overridden.trunk.id, `${prefix}2110`)
+  }
+})
+
 function snapshotDirectory(context) {
   const temp = mkdtempSync(join(tmpdir(), 'llvm-sync-'))
   context.after(() => rmSync(temp, { recursive: true, force: true }))
   return join(temp, 'data')
 }
 
-function transports({ nextVersion = false, changed = false, unavailable = false } = {}) {
+function transports({
+  nextVersion = false,
+  changed = false,
+  unavailable = false,
+  issueNumbers = [2, 3],
+  cIssue = false,
+  coarseOnlyPr = false,
+  expectedWarning = false,
+} = {}) {
   const compilations = []
   const item = {
     state: 'open',
@@ -57,7 +89,7 @@ function transports({ nextVersion = false, changed = false, unavailable = false 
     user: actor,
     created_at: now,
     updated_at: now,
-    labels: [{ name: 'clang:frontend' }],
+    labels: [{ name: 'clang:frontend' }, { name: 'clang:sema' }],
   }
   const collector = createGitHubCollector({
     repository,
@@ -69,13 +101,24 @@ function transports({ nextVersion = false, changed = false, unavailable = false 
       const path = url.pathname
       if (path === '/search/issues')
         return response({
-          items: (url.searchParams.get('q').includes('is:issue') ? [2, 3] : [1]).map((number) => ({
-            ...item,
-            number,
-          })),
+          items: (url.searchParams.get('q').includes('is:issue') ? issueNumbers : [1]).map(
+            (number) => ({
+              ...item,
+              number,
+            }),
+          ),
         })
       if (path.endsWith('/pulls/1'))
-        return response({ ...item, number: 1, head: { sha: head }, base: { ref: 'main' } })
+        return response({
+          ...item,
+          number: 1,
+          head: { sha: head },
+          base: { ref: 'main' },
+          labels: coarseOnlyPr ? ['clang:frontend'] : item.labels,
+        })
+      if (path.endsWith('/pulls/1/files') && coarseOnlyPr) {
+        return response([{ filename: 'clang/lib/Frontend/CompilerInstance.cpp' }])
+      }
       if (path.endsWith('/check-runs')) return response({ check_runs: [] })
       if (path.endsWith('/protection/required_status_checks'))
         return new Response(null, { status: 401 })
@@ -83,12 +126,16 @@ function transports({ nextVersion = false, changed = false, unavailable = false 
         const number = Number(path.at(-1))
         const body = [
           number === 3 ? 'Clang 21.1.0' : 'Clang frontend',
-          '```cpp',
+          cIssue && number === 2 ? '```c' : '```cpp',
           'int example;',
           '```',
-          '`clang++ -std=c++20 example.cpp`',
+          cIssue && number === 2
+            ? '`clang -std=c17 example.c`'
+            : '`clang++ -std=c++20 example.cpp`',
           'error: unexpected diagnostic',
-          'Expected behavior: should compile',
+          expectedWarning
+            ? 'Expected behavior: should compile with a warning about unused variables'
+            : 'Expected behavior: should compile',
         ].join('\n')
         return response({
           ...item,
@@ -108,11 +155,12 @@ function transports({ nextVersion = false, changed = false, unavailable = false 
     async fetchImpl(url, request) {
       assert.equal(url.origin, 'https://ce.example.invalid')
       if (request.method === 'GET') {
-        return unavailable ? new Response(null, { status: 503 }) : response(nextCatalog)
+        const entries = url.pathname.endsWith('/c') ? cCatalog : nextCatalog
+        return unavailable ? new Response(null, { status: 503 }) : response(entries)
       }
       const id = url.pathname.split('/').at(-2)
       compilations.push(id)
-      const trunk = id === 'clang_trunk'
+      const trunk = id.endsWith('_trunk')
       return response({
         code: trunk ? 0 : 1,
         stdout: [],
@@ -195,4 +243,40 @@ test('preserves cached evidence through a compiler catalog outage', async (conte
   const recovered = await sync(output, 29, {}, outage.state)
   assert.equal(recovered.state.issues[2].lastVerifiedAt, now)
   assert.deepEqual(recovered.compilations, ['clang2110', 'clang_trunk'])
+})
+
+test('retains off-window evidence for reuse and reports bounded coverage in the summary', async (context) => {
+  const output = snapshotDirectory(context)
+  const initial = await sync(output, 27)
+  const narrowed = await sync(output, 28, { issueNumbers: [3] }, initial.state)
+  assert.deepEqual(narrowed.state.issues[2], initial.state.issues[2])
+  assert.deepEqual(
+    narrowed.input.issues.map((issue) => issue.id),
+    [3],
+  )
+  const returned = await sync(output, 29, {}, narrowed.state)
+  assert.deepEqual(returned.compilations, [])
+  const summary = JSON.parse(readFileSync(join(output, 'summary.json'), 'utf8'))
+  assert.equal(summary.coverage.mode, 'bounded-sample')
+  assert.match(summary.coverage.note, /sampled/)
+  assert.equal(returned.input.issues.find((issue) => issue.id === 2)?.lastVerifiedAt, now)
+})
+
+test('uses the C catalog and excludes unsupported expectations and broad-only PRs', async (context) => {
+  const output = snapshotDirectory(context)
+  const valid = await sync(output, 27, { cIssue: true, coarseOnlyPr: true })
+  assert.deepEqual(valid.compilations, ['cclang2212', 'cclang_trunk'])
+  assert.equal(valid.input.issues.find((issue) => issue.id === 2)?.conclusion, 'close-candidate')
+  assert.equal(
+    JSON.parse(readFileSync(join(output, 'summary.json'), 'utf8')).modules.find(
+      (entry) => entry.id === 'clang-sema',
+    ).counts.prTotal,
+    0,
+  )
+  const warning = await sync(output, 28, { cIssue: true, expectedWarning: true }, valid.state)
+  assert.deepEqual(warning.compilations, [])
+  assert.equal(
+    warning.input.issues.find((issue) => issue.id === 2)?.conclusion,
+    'insufficient-evidence',
+  )
 })

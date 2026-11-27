@@ -73,6 +73,8 @@ jobs:
           COMPILER_EXPLORER_TIMEOUT_MS: ${{ vars.COMPILER_EXPLORER_TIMEOUT_MS }}
           CLANG_BASELINE_ID: ${{ vars.CLANG_BASELINE_ID }}
           CLANG_TRUNK_ID: ${{ vars.CLANG_TRUNK_ID }}
+          CLANG_C_BASELINE_ID: ${{ vars.CLANG_C_BASELINE_ID }}
+          CLANG_C_TRUNK_ID: ${{ vars.CLANG_C_TRUNK_ID }}
         shell: bash
         run: |
           if [[ "$SYNC_MODE" == live ]]; then

@@ -24,6 +24,15 @@
       "type": "string",
       "pattern": "^snapshots/[a-z0-9]+(?:[-_][a-z0-9]+)*/$"
     },
+    "coverage": {
+      "type": "object",
+      "properties": {
+        "mode": { "enum": ["bounded-sample", "full"] },
+        "note": { "type": "string", "minLength": 1 }
+      },
+      "required": ["mode", "note"],
+      "additionalProperties": false
+    },
     "kpis": {
       "$ref": "common.schema.json#/$defs/counts"
     },

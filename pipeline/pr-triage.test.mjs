@@ -43,6 +43,9 @@ function triage(overrides, options) {
       url,
       paths: [touchedPath],
       reviewsComplete: true,
+      commentsComplete: true,
+      commitsComplete: true,
+      timelineComplete: true,
       ...overrides,
     },
     { now, ...options },
@@ -63,7 +66,7 @@ test('classifies one PR across path- and label-based modules', () => {
 
 test('keeps an approval on an old SHA separate from review on HEAD', () => {
   const approval = review('02', oldSha, 'approved')
-  const push = event('03', 'commit', 'author', headSha)
+  const push = event('03', 'commit', 'author', headSha, { isPush: true })
   const options = { events: [push, approval], commitsAheadBySha: { [oldSha]: 2 } }
   const pr = triage(options)
   assert.deepEqual(pr.headReview, { status: 'review-required', commitSha: headSha })
@@ -96,19 +99,33 @@ test('uses current approval and does not promote a dismissed or bot review', () 
   assert.deepEqual(pr.queues, [])
 })
 
-test('awaits re-review only after the author pushes HEAD and until a human reviews it', () => {
+test('attributes an observed author push and stops waiting when a human reviews HEAD', () => {
   const changes = review('02', oldSha, 'changes-requested')
-  const push = event('03', 'commit', 'Author', headSha)
+  const push = event('03', 'commit', 'Author', headSha, { isPush: true })
   const bot = review('04', headSha, 'commented', { isBot: true })
   const pr = triage({ events: [push, changes, bot] })
   assert.deepEqual(pr.queues, ['awaiting-rereview'])
   assert.deepEqual(pr.reasonEvidenceUrls, [changes.url, push.url])
+  assert.match(pr.reason, /author pushed/)
   assert.deepEqual(
     triage({ events: [changes, push, review('05', headSha, 'commented')] }).queues,
     [],
   )
   assert.deepEqual(triage({ events: [{ ...push, at: changes.at }, changes] }).queues, [])
-  assert.deepEqual(triage({ events: [changes, { ...push, actor: 'maintainer' }] }).queues, [])
+  const maintainerPush = triage({ events: [changes, { ...push, actor: 'maintainer' }] })
+  assert.doesNotMatch(maintainerPush.reason, /author pushed/)
+  assert.ok(maintainerPush.reason.includes(headSha))
+})
+
+test('uses commit metadata only as SHA evidence', () => {
+  const changes = review('02', oldSha, 'changes-requested')
+  const commit = event('03', 'commit', 'author', headSha, { isPush: false })
+  const pr = triage({ events: [changes, commit] })
+  assert.deepEqual(pr.queues, ['awaiting-rereview'])
+  assert.deepEqual(pr.reasonEvidenceUrls, [changes.url, commit.url])
+  assert.ok(pr.reason.includes(headSha))
+  assert.doesNotMatch(pr.reason, /pushed/)
+  assert.equal(pr.lastHumanActivityAt, changes.at)
 })
 
 test('ignores bot activity for first review and inactivity', () => {

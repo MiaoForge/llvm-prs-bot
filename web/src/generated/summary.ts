@@ -7,6 +7,10 @@ export interface Summary {
   githubSyncedAt: string | null
   trunkCompilerVersion: string | null
   snapshotRoot: string
+  coverage?: {
+    mode: 'bounded-sample' | 'full'
+    note: string
+  }
   kpis: {
     prTotal: number
     issueTotal: number
