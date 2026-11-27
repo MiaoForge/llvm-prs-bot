@@ -3,7 +3,7 @@ import type { IssueRow, PrRow, View } from './snapshot'
 
 export const prQueues = {
   'approved-follow-up': 'Approved · Follow-up',
-  'awaiting-rereview': 'Author Updated',
+  'awaiting-rereview': 'Awaiting Re-review',
   'awaiting-first-review': 'Needs First Review',
   'long-inactive': 'Long Inactive',
 } satisfies Record<PrRow['queues'][number], string>
