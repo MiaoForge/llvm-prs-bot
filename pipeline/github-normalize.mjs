@@ -189,7 +189,20 @@ export function normalizeIssue(issue, comments, githubSyncedAt) {
   const originalDate = original && Date.parse(original[1])
   const extraction = extractReproducer(issue.body ?? '', issue.title)
   const paths =
-    (issue.body ?? '').match(/\bclang\/(?:lib|include\/clang|test)\/[A-Za-z0-9_./-]+/g) ?? []
+    (issue.body ?? '').match(
+      /\b(?:clang\/(?:lib|include\/clang|test|unittests)|llvm|lld|mlir|lldb|libcxx|clang-tools-extra|compiler-rt|flang|bolt|libc|openmp)\/[A-Za-z0-9_./-]+/g,
+    ) ?? []
+  // Recognize Clang/Lex issues from explicit lexer/preprocessor symbols or title tags
+  // when upstream issues carry only the umbrella clang:frontend label.
+  const lexHintText = `${issue.title ?? ''}\n${issue.body ?? ''}`
+  if (
+    !paths.some((p) => p.startsWith('clang/lib/Lex/')) &&
+    /(?:\[clang\]\[(?:Lex|Lexer|Preprocessor)\]|\[(?:Lex|Lexer|Preprocessor)\]|\b(?:Preprocessor::|Lexer::|TokenLexer|HeaderSearch|PPDirectives|PPMacroExpansion|DependencyDirectivesScanner)\b)/i.test(
+      lexHintText,
+    )
+  ) {
+    paths.push('clang/lib/Lex/')
+  }
   const moduleEvidence = matchModuleEvidence({ labels, paths })
   const humanComment = comments
     .filter((comment) => isHuman(comment.user) && comment.created_at)

@@ -11,6 +11,7 @@ import {
 } from './compiler-explorer.mjs'
 import { selectClangCompilers } from './compiler-selection.mjs'
 import { createGitHubCollector, defaultGitHubOptions } from './github-collector.mjs'
+import { createGitHubGraphQLCollector, defaultGraphQLOptions } from './github-graphql-collector.mjs'
 import { issueSource, verifyIssue } from './issue-verification.mjs'
 import { triagePr } from './pr-triage.mjs'
 import { reverifyIssue } from './reverify-issue.mjs'
@@ -18,7 +19,7 @@ import { supportsCompileArgs } from './reproducer.mjs'
 
 const defaultOutput = fileURLToPath(new URL('../data/', import.meta.url))
 const stateVersion = 1
-const defaultMaxReverify = 6
+const defaultMaxReverify = 15
 
 function fingerprint(issue, baseline, trunk) {
   return createHash('sha256')
@@ -283,24 +284,37 @@ async function main() {
   })
   const repository = process.env.UPSTREAM_GITHUB_REPOSITORY || defaultGitHubOptions.repository
   const maxReverify = integer('MAX_REVERIFY_PER_RUN', defaultMaxReverify)
-  const maxIssues = integer('GITHUB_MAX_ISSUES', defaultGitHubOptions.maxIssues)
+  const useGraphQL =
+    Boolean(process.env.GITHUB_TOKEN) && process.env.GITHUB_COLLECTOR_MODE !== 'rest'
+  const defaults = useGraphQL ? defaultGraphQLOptions : defaultGitHubOptions
+  const maxIssues = integer('GITHUB_MAX_ISSUES', defaults.maxIssues)
   const now = new Date().toISOString()
   const labels = (process.env.GITHUB_MODULE_LABELS || '')
     .split(',')
     .map((label) => label.trim())
     .filter(Boolean)
   const snapshotId = values['snapshot-id'] ?? `live-${now.toLowerCase().replace(/[:.]/g, '')}`
-  const collector = createGitHubCollector({
-    repository,
-    token: process.env.GITHUB_TOKEN,
-    labels: labels.length ? labels : defaultGitHubOptions.labels,
-    maxPages: integer('GITHUB_MAX_PAGES', defaultGitHubOptions.maxPages),
-    maxPulls: integer('GITHUB_MAX_PRS', defaultGitHubOptions.maxPulls),
-    maxIssues,
-    maxHistory: integer('GITHUB_MAX_HISTORY', defaultGitHubOptions.maxHistory),
-    timeoutMs: integer('GITHUB_TIMEOUT_MS', defaultGitHubOptions.timeoutMs),
-    requestBudget: integer('GITHUB_REQUEST_BUDGET', defaultGitHubOptions.requestBudget),
-  })
+  const collector = useGraphQL
+    ? createGitHubGraphQLCollector({
+        repository,
+        token: process.env.GITHUB_TOKEN,
+        maxPulls: integer('GITHUB_MAX_PRS', defaultGraphQLOptions.maxPulls),
+        maxIssues,
+        maxHistory: integer('GITHUB_MAX_HISTORY', defaultGraphQLOptions.maxHistory),
+        timeoutMs: integer('GITHUB_TIMEOUT_MS', defaultGraphQLOptions.timeoutMs),
+        requestBudget: integer('GITHUB_REQUEST_BUDGET', defaultGraphQLOptions.requestBudget),
+      })
+    : createGitHubCollector({
+        repository,
+        token: process.env.GITHUB_TOKEN,
+        labels: labels.length ? labels : defaultGitHubOptions.labels,
+        maxPages: integer('GITHUB_MAX_PAGES', defaultGitHubOptions.maxPages),
+        maxPulls: integer('GITHUB_MAX_PRS', defaultGitHubOptions.maxPulls),
+        maxIssues,
+        maxHistory: integer('GITHUB_MAX_HISTORY', defaultGitHubOptions.maxHistory),
+        timeoutMs: integer('GITHUB_TIMEOUT_MS', defaultGitHubOptions.timeoutMs),
+        requestBudget: integer('GITHUB_REQUEST_BUDGET', defaultGitHubOptions.requestBudget),
+      })
   const client = createCompilerExplorerClient({
     timeoutMs: integer('COMPILER_EXPLORER_TIMEOUT_MS', 15_000),
     requestBudget: integer('COMPILER_EXPLORER_REQUEST_BUDGET', 2 + maxIssues + 2 * maxReverify),

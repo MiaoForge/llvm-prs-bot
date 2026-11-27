@@ -60,11 +60,17 @@ test('builds and validates canonical shards and cross-module counts', (context) 
   assert.equal(summary.kpis.issueConclusions['insufficient-evidence'], 1)
   const root = join(out, summary.snapshotRoot)
   for (const { id, counts } of summary.modules) {
-    assert.deepEqual(counts, summary.kpis)
     const index = readJson(join(root, 'modules', id, 'prs-index.json'))
-    assert.equal(index.items.length, 1)
-    assert.equal(index.items[0].id, 9)
-    assert.equal('timeline' in index.items[0], false)
+    if (id === 'clang-sema' || id === 'clang-ast') {
+      assert.deepEqual(counts, summary.kpis)
+      assert.equal(index.items.length, 1)
+      assert.equal(index.items[0].id, 9)
+      assert.equal('timeline' in index.items[0], false)
+    } else {
+      assert.equal(counts.prTotal, 0)
+      assert.equal(counts.issueTotal, 0)
+      assert.equal(index.items.length, 0)
+    }
   }
   assert.deepEqual(readJson(join(root, 'items/pr-9.json')).timeline, [])
   assert.equal(readJson(join(root, 'items/issue-9.json')).source, 'generated-by-fuzzer')
