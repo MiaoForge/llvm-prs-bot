@@ -1270,6 +1270,23 @@ button:disabled {
   font-size: 12px;
   overflow-wrap: anywhere;
 }
+.evidence-disclosure {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--bdr);
+  background: var(--surf-2);
+  color: var(--mut);
+}
+.evidence-disclosure > summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+  list-style: disclosure-closed inside;
+}
+.evidence-disclosure[open] > summary {
+  list-style: disclosure-open inside;
+}
 .matrix-2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }

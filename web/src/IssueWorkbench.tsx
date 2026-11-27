@@ -158,24 +158,21 @@ export function IssueWorkbench({ summary, moduleId, reload, busy }: WorkbenchPro
               <span className="inline-facts">
                 <IssueBadges issue={issue} />
                 <ModuleTags summary={summary} ids={issue.moduleIds} />
-              </span>
-              <span className="inline-facts comparison-row">
-                <span>
-                  Baseline <OutcomeText outcome={issue.baseline?.outcome} />
-                </span>
-                <ArrowRight className="ic ic-sm" aria-hidden="true" />
-                <span>
-                  Trunk <OutcomeText outcome={issue.trunk?.outcome} />
+                <span className="meta-right" title={utc(issue.originalReportAt)}>
+                  {day(issue.originalReportAt)}
                 </span>
               </span>
-              <span className="row-foot issue-row-foot">
-                <span>
-                  Reported {day(issue.originalReportAt)} · {tracker(issue.originalReportTracker)}
+              {(issue.baseline || issue.trunk) && (
+                <span className="inline-facts comparison-row">
+                  <span>
+                    Baseline <OutcomeText outcome={issue.baseline?.outcome} />
+                  </span>
+                  <ArrowRight className="ic ic-sm" aria-hidden="true" />
+                  <span>
+                    Trunk <OutcomeText outcome={issue.trunk?.outcome} />
+                  </span>
                 </span>
-                <span title={utc(issue.lastVerifiedAt)}>
-                  Verified {issue.lastVerifiedAt ? day(issue.lastVerifiedAt) : '—'}
-                </span>
-              </span>
+              )}
             </button>
           ))}
         </section>
@@ -324,14 +321,16 @@ function IssueEvidence({
         <h2 className="ins-title">{issue.title}</h2>
         <div className="inline-facts evidence-meta">
           <span>
-            GitHub synced <time dateTime={issue.githubSyncedAt}>{utc(issue.githubSyncedAt)}</time>
+            Reported <time dateTime={issue.originalReportAt}>{day(issue.originalReportAt)}</time> ·{' '}
+            {tracker(issue.originalReportTracker)}
           </span>
           <span>
-            Last verified{' '}
             {issue.lastVerifiedAt ? (
-              <time dateTime={issue.lastVerifiedAt}>{utc(issue.lastVerifiedAt)}</time>
+              <>
+                Verified <time dateTime={issue.lastVerifiedAt}>{utc(issue.lastVerifiedAt)}</time>
+              </>
             ) : (
-              'Unknown'
+              'Not yet verified'
             )}
           </span>
         </div>
@@ -349,39 +348,6 @@ function IssueEvidence({
             )}
           </h3>
           <pre className="diag crash-signature">{issue.crashSignature}</pre>
-        </section>
-      )}
-      <div className="matrix-2 issue-verdict-grid">
-        <section className={`callout ${verdict.tone}`}>
-          <h3 className="callout-h">Verification Result</h3>
-          <p className="callout-p">
-            {notYetVerified
-              ? 'Not yet verified. No compiler runs have been recorded yet.'
-              : verdict.explanation}
-          </p>
-        </section>
-        <section className="callout mut">
-          <h3 className="callout-h">Fix Attribution · {humanize(issue.fixAttribution.status)}</h3>
-          {issue.fixAttribution.status === 'unknown' ? (
-            <p className="callout-p">No fix commit has been identified.</p>
-          ) : (
-            <>
-              <p className="callout-p">{issue.fixAttribution.reason}</p>
-              <code className="break-all text-xs">{issue.fixAttribution.commitSha}</code>
-              <EvidenceLinks urls={issue.fixAttribution.evidenceUrls} />
-            </>
-          )}
-        </section>
-      </div>
-      <ModuleEvidence evidence={issue.moduleEvidence} modules={modules} />
-      {issue.missingEvidence.length > 0 && (
-        <section className="callout mut">
-          <h3 className="callout-h">Missing Evidence Checklist</h3>
-          <ul className="list-disc pl-5">
-            {issue.missingEvidence.map((gap) => (
-              <li key={gap}>{gaps[gap]}</li>
-            ))}
-          </ul>
         </section>
       )}
       <section className="code-box">
@@ -423,14 +389,48 @@ function IssueEvidence({
           </Suspense>
         )}
       </section>
-      <div className="diff-grid">
-        <Diagnostic title="Baseline" run={baseline} />
-        <Diagnostic title="Trunk" run={trunk} />
-      </div>
-      <section className="m-cell">
-        <h3 className="m-k">Expected Behavior</h3>
-        <p className="expected-behavior">{expectedBehavior ?? 'Unknown'}</p>
-      </section>
+      {notYetVerified ? (
+        <section className="callout mut">
+          <h3 className="callout-h">Verification Result</h3>
+          <p className="callout-p">Not yet verified. No compiler runs have been recorded yet.</p>
+        </section>
+      ) : (
+        <>
+          <section className={`callout ${verdict.tone}`}>
+            <h3 className="callout-h">Verification Result</h3>
+            <p className="callout-p">{verdict.explanation}</p>
+          </section>
+          <div className="diff-grid">
+            <Diagnostic title="Baseline" run={baseline} />
+            <Diagnostic title="Trunk" run={trunk} />
+          </div>
+        </>
+      )}
+      {expectedBehavior && (
+        <section className="m-cell">
+          <h3 className="m-k">Expected Behavior</h3>
+          <p className="expected-behavior">{expectedBehavior}</p>
+        </section>
+      )}
+      {issue.fixAttribution.status !== 'unknown' && (
+        <section className="callout mut">
+          <h3 className="callout-h">Fix Attribution · {humanize(issue.fixAttribution.status)}</h3>
+          <p className="callout-p">{issue.fixAttribution.reason}</p>
+          <code className="break-all text-xs">{issue.fixAttribution.commitSha}</code>
+          <EvidenceLinks urls={issue.fixAttribution.evidenceUrls} />
+        </section>
+      )}
+      {issue.missingEvidence.length > 0 && (
+        <details className="evidence-disclosure">
+          <summary>Missing evidence ({issue.missingEvidence.length})</summary>
+          <ul className="mt-2 list-disc pl-5 text-xs">
+            {issue.missingEvidence.map((gap) => (
+              <li key={gap}>{gaps[gap]}</li>
+            ))}
+          </ul>
+        </details>
+      )}
+      <ModuleEvidence evidence={issue.moduleEvidence} modules={modules} />
     </>
   )
 }

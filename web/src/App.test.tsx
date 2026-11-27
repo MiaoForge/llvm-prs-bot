@@ -350,7 +350,7 @@ describe('static workbench', () => {
     )
     open('#/issues?module=clang-sema&item=204')
     const detail = within(await screen.findByRole('region', { name: 'Issue details' }))
-    expect(await detail.findByRole('heading', { name: 'Missing Evidence Checklist' })).toBeTruthy()
+    expect(await detail.findByText(/Missing evidence \(\d+\)/)).toBeTruthy()
     expect(detail.getByText('Insufficient evidence')).toBeTruthy()
     expect(detail.getByText(/Not yet verified\. No compiler runs/)).toBeTruthy()
     expect(detail.queryByText(/The recorded runs do not establish/)).toBeNull()
@@ -360,10 +360,10 @@ describe('static workbench', () => {
     const godboltHref = detail.getByRole('link', { name: 'Open in Godbolt' }).getAttribute('href')
     expect(godboltHref).toMatch(/^https:\/\/godbolt\.org\/clientstate\//)
     expect(godboltHref).not.toBe(reporterUrl)
-    const evidence = within(detail.getByRole('region', { name: 'Module Evidence' }))
-    expect(evidence.getByText('Clang / Sema')).toBeTruthy()
-    expect(evidence.getByText('clang:sema')).toBeTruthy()
-    expect(detail.getByRole('heading', { name: 'Fix Attribution · Unknown' })).toBeTruthy()
+    expect(detail.getByText('Module evidence (1)')).toBeTruthy()
+    expect(detail.getByText('Clang / Sema')).toBeTruthy()
+    expect(detail.getByText('clang:sema')).toBeTruthy()
+    expect(detail.queryByRole('heading', { name: /Fix Attribution/ })).toBeNull()
     expect(detail.queryByRole('button', { name: 'Copy Close Comment' })).toBeNull()
   })
 
@@ -529,11 +529,11 @@ describe('static workbench', () => {
     expect(
       ci.getByText('Required checks: 2 passed · 1 failed · 1 pending · 1 result unknown'),
     ).toBeTruthy()
-    const evidence = within(detail.getByRole('region', { name: 'Module Evidence' }))
-    expect(evidence.getByText('Clang / Sema')).toBeTruthy()
-    expect(evidence.getByText('Clang / AST')).toBeTruthy()
-    expect(evidence.getByText(matchedPath)).toBeTruthy()
-    expect(evidence.getByText('clang:sema')).toBeTruthy()
+    expect(detail.getByText('Module evidence (2)')).toBeTruthy()
+    expect(detail.getByText('Clang / Sema')).toBeTruthy()
+    expect(detail.getByText('Clang / AST')).toBeTruthy()
+    expect(detail.getByText(matchedPath)).toBeTruthy()
+    expect(detail.getByText('clang:sema')).toBeTruthy()
   })
 
   it('shows unknown results when required checks have no recorded runs', async () => {
@@ -584,7 +584,7 @@ describe('static workbench', () => {
     const versions = await screen.findAllByText('clang 24.0.0git · 34f5121a3615', {
       selector: 'code',
     })
-    expect(versions).toHaveLength(2)
+    expect(versions).toHaveLength(1)
     for (const code of versions) expect(code.getAttribute('title')).toBe(version)
   })
 
@@ -604,19 +604,15 @@ describe('static workbench', () => {
     )
 
     open('#/')
-    expect(await screen.findByText('Bounded sample')).toBeTruthy()
-    expect(screen.getByText(note)).toBeTruthy()
+    const badge = await screen.findByText('Bounded sample')
+    expect(badge.getAttribute('title')).toBe(note)
     expect(
       screen.getByText(
-        `${summary.kpis.prTotal} sampled PRs and ${summary.kpis.issueTotal} sampled issues in this snapshot`,
+        `${summary.kpis.prTotal} sampled PRs · ${summary.kpis.issueTotal} sampled issues across ${summary.modules.length} modules`,
       ),
     ).toBeTruthy()
-    expect(
-      screen.getByRole('heading', { name: /PR Actionable Queues · \d+ Sampled PRs/ }),
-    ).toBeTruthy()
-    expect(
-      screen.getByRole('heading', { name: /Issue Verification · \d+ Sampled Issues/ }),
-    ).toBeTruthy()
+    expect(screen.getByRole('heading', { name: /PR Queues · \d+/ })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: /Issue Verification · \d+/ })).toBeTruthy()
     expect(screen.getByRole('columnheader', { name: 'Sampled PRs' })).toBeTruthy()
     expect(screen.getByRole('columnheader', { name: 'Sampled Issues' })).toBeTruthy()
   })

@@ -3,6 +3,7 @@ import { Copy, GitPullRequest } from 'lucide-react'
 import { prIndexOptions, usePrDetail, type PrDetail, type Summary } from './snapshot'
 import { filterPrs, parseItem, prQueues, prSorts, useFilters } from './state'
 import {
+  compactShas,
   CopyButton,
   DetailClose,
   EmptyList,
@@ -116,18 +117,22 @@ export function PrWorkbench({ summary, moduleId, reload, busy }: WorkbenchProps)
                 </span>
                 <span className="meta-right">@{pr.author}</span>
               </span>
-              <span className="verdict-row">{pr.reason}</span>
               <span className="row-foot">
                 <span className="inline-facts">
+                  {pr.queues[0] && (
+                    <span
+                      className={`badge ${pr.queues[0] === 'approved-follow-up' ? 'warn' : 'mut'}`}
+                    >
+                      {prQueues[pr.queues[0]]}
+                    </span>
+                  )}
                   <ModuleTags summary={summary} ids={pr.moduleIds} />
                   <span
                     className={`fact-txt ${pr.headCi.status === 'passing' ? 'ok' : pr.headCi.status === 'failing' ? 'err' : ''}`}
                   >
                     CI {pr.headCi.status}
                   </span>
-                  <span title={utc(pr.lastHumanActivityAt)}>
-                    Human activity {day(pr.lastHumanActivityAt)}
-                  </span>
+                  <span title={utc(pr.lastHumanActivityAt)}>{day(pr.lastHumanActivityAt)}</span>
                 </span>
               </span>
             </button>
@@ -212,7 +217,7 @@ function PrEvidence({ pr, modules }: { pr: PrDetail; modules: Summary['modules']
   const events = pr.timeline
     .filter((event) => !humanOnly || !event.isBot)
     .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
-  const sha = (value: string) => <code title={value}>{value.slice(0, 12)}</code>
+  const sha = (value: string) => <code title={value}>{value.slice(0, 8)}</code>
   const ciContext =
     pr.headCi.status === 'unknown' && pr.requiredChecks.length > 0 ? (
       <>
@@ -261,7 +266,7 @@ function PrEvidence({ pr, modules }: { pr: PrDetail; modules: Summary['modules']
       </header>
       <section className="callout">
         <h3 className="callout-h">Why this PR is here</h3>
-        <p className="callout-p">{pr.reason}</p>
+        <p className="callout-p">{compactShas(pr.reason)}</p>
         <EvidenceLinks urls={pr.reasonEvidenceUrls} />
       </section>
       <section>

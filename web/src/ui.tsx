@@ -28,6 +28,10 @@ export function compactCompilerVersion(version: string | null) {
   return firstLine.length > 36 ? `${firstLine.slice(0, 35).trimEnd()}…` : firstLine
 }
 
+export function compactShas(text: string) {
+  return text.replace(/\b[0-9a-f]{40}\b/gi, (sha) => sha.slice(0, 8))
+}
+
 export function ModuleEvidence({
   evidence,
   modules,
@@ -37,9 +41,9 @@ export function ModuleEvidence({
 }) {
   if (!evidence?.length) return null
   return (
-    <section className="callout mut" aria-label="Module Evidence">
-      <h3 className="callout-h">Module Evidence</h3>
-      <dl className="grid gap-3 text-xs">
+    <details className="evidence-disclosure" aria-label="Module Evidence">
+      <summary>Module evidence ({evidence.length})</summary>
+      <dl className="mt-2 grid gap-3 text-xs">
         {evidence.map(({ moduleId, matchedPaths, matchedLabels }) => (
           <div key={moduleId}>
             <dt className="font-semibold">
@@ -72,7 +76,7 @@ export function ModuleEvidence({
           </div>
         ))}
       </dl>
-    </section>
+    </details>
   )
 }
 
