@@ -7,8 +7,8 @@ import { compactCompilerVersion, LoadError, Loading, utc } from './ui'
 import type { WorkbenchProps } from './PrWorkbench'
 
 const prDescriptions = [
-  'Post-approval commits or a merge request',
-  'New commits after changes requested',
+  'Approved PRs to check for merge readiness',
+  'Changes requested on a different revision',
   'Waiting for a first human review',
   'Based on human activity',
 ]

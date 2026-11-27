@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowRight, Copy, FlaskConical, Zap } from 'lucide-react'
+import { buildGodboltUrl } from './godbolt'
 import { issueIndexOptions, useIssueDetail, type IssueDetail, type IssueRow } from './snapshot'
 import { filterIssues, issueQueues, issueSorts, issueSources, parseItem, useFilters } from './state'
 import {
@@ -292,7 +293,10 @@ function IssueEvidence({
   } = issue.repro
   const notYetVerified = baseline === null && trunk === null && issue.lastVerifiedAt === null
   const comment = closeComment(issue)
-  const godbolt = trunk?.godboltUrl ?? baseline?.godboltUrl
+  const godbolt =
+    trunk?.godboltUrl ??
+    baseline?.godboltUrl ??
+    (sourceCode !== null ? buildGodboltUrl({ sourceCode, compileArgs }) : null)
   return (
     <>
       <header className="ins-head">

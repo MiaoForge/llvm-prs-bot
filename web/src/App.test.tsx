@@ -357,7 +357,9 @@ describe('static workbench', () => {
     expect(
       detail.getByRole('link', { name: 'Reporter’s Compiler Explorer link' }).getAttribute('href'),
     ).toBe(reporterUrl)
-    expect(detail.queryByRole('link', { name: 'Open in Godbolt' })).toBeNull()
+    const godboltHref = detail.getByRole('link', { name: 'Open in Godbolt' }).getAttribute('href')
+    expect(godboltHref).toMatch(/^https:\/\/godbolt\.org\/clientstate\//)
+    expect(godboltHref).not.toBe(reporterUrl)
     const evidence = within(detail.getByRole('region', { name: 'Module Evidence' }))
     expect(evidence.getByText('Clang / Sema')).toBeTruthy()
     expect(evidence.getByText('clang:sema')).toBeTruthy()
@@ -387,6 +389,30 @@ describe('static workbench', () => {
     expect(detail.getByRole('link', { name: 'Open in Godbolt' }).getAttribute('href')).toBe(
       issue205.runs.trunk.godboltUrl,
     )
+  })
+
+  it('omits Open in Godbolt when neither recorded runs nor extracted source code exist', async () => {
+    const reporterUrl = 'https://godbolt.example.invalid/z/only-reporter'
+    mockFetch((path) =>
+      path.endsWith('/issue-204.json')
+        ? json({
+            ...issue204,
+            repro: {
+              ...issue204.repro,
+              sourceCode: null,
+              reporterGodboltUrls: [reporterUrl],
+            },
+          })
+        : undefined,
+    )
+    open('#/issues?module=clang-sema&item=204')
+    const detail = within(await screen.findByRole('region', { name: 'Issue details' }))
+    expect(
+      (await detail.findByRole('link', { name: 'Reporter’s Compiler Explorer link' })).getAttribute(
+        'href',
+      ),
+    ).toBe(reporterUrl)
+    expect(detail.queryByRole('link', { name: 'Open in Godbolt' })).toBeNull()
   })
 
   it('shows required check results alongside unknown HEAD CI and names matched PR paths', async () => {
