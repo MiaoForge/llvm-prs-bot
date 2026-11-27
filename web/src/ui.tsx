@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { ExternalLink, X } from 'lucide-react'
 import { SnapshotError, type Summary } from './snapshot'
 import { nextItem } from './state'
@@ -83,7 +83,27 @@ export function ModuleTags({ summary, ids }: { summary: Summary; ids: string[] }
 
 export function useRowNavigation(items: readonly { id: number }[], selected: number | null, select: (id: number | null, replace?: boolean) => void) {
   const list = useRef<HTMLDivElement>(null)
-  const focused = useRef<number | null>(null)
+  const detail = useRef<HTMLElement>(null)
+  const returnFocus = useRef<number | null>(null)
+
+  function close() {
+    returnFocus.current = selected
+    select(null)
+  }
+
+  useLayoutEffect(() => {
+    if (selected === null && returnFocus.current !== null) {
+      list.current?.querySelector<HTMLElement>(`[data-item="${returnFocus.current}"]`)?.focus()
+      returnFocus.current = null
+    }
+    if (selected !== null && detail.current) {
+      detail.current.scrollTop = 0
+      if (window.matchMedia?.('(max-width: 1139px)').matches) {
+        detail.current.querySelector<HTMLButtonElement>('button[aria-label="Close details"]')?.focus()
+      }
+    }
+  }, [selected])
+
   useEffect(() => {
     function handleKey(event: KeyboardEvent) {
       const target = event.target instanceof Element ? event.target : null
@@ -92,28 +112,24 @@ export function useRowNavigation(items: readonly { id: number }[], selected: num
 
       if (event.key === 'Escape' && selected !== null) {
         event.preventDefault()
-        select(null)
-        list.current?.querySelector<HTMLElement>(`[data-item="${selected}"]`)?.focus()
+        close()
       }
       if (event.key !== 'j' && event.key !== 'k') return
-      const id = nextItem(items, focused.current ?? selected, event.key === 'j' ? 1 : -1)
+      if (selected !== null && window.matchMedia?.('(max-width: 1139px)').matches) return
+      const focused = list.current?.contains(document.activeElement)
+        ? document.activeElement?.closest<HTMLElement>('[data-item]')?.dataset.item : undefined
+      const id = nextItem(items, focused ? Number(focused) : selected, event.key === 'j' ? 1 : -1)
       if (id === null) return
       event.preventDefault()
       list.current?.querySelector<HTMLElement>(`[data-item="${id}"]`)?.focus()
-      if (selected !== null && !window.matchMedia?.('(max-width: 1139px)').matches) select(id, true)
+      if (selected !== null && selected !== id) select(id, true)
     }
 
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
   }, [items, selected, select])
 
-  return {
-    ref: list,
-    onFocus: (event: React.FocusEvent<HTMLDivElement>) => {
-      const row = (event.target as HTMLElement).closest<HTMLElement>('[data-item]')
-      focused.current = row ? Number(row.dataset.item) : null
-    },
-  }
+  return { list, detail, close }
 }
 
 export function DetailClose({ close }: { close: () => void }) {

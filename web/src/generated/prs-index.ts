@@ -39,6 +39,5 @@ export interface PrIndex {
     mergeability: 'mergeable' | 'conflicting' | 'unknown'
     unresolvedDiscussionCount: number | null
     mergeHelpRequested: boolean
-    [k: string]: unknown
   }[]
 }

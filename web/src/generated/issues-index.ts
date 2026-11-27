@@ -29,6 +29,5 @@ export interface IssueIndex {
       compilerVersion: string
       outcome: 'reported-symptom' | 'expected-behavior' | 'different-behavior' | 'unknown'
     } | null
-    [k: string]: unknown
   }[]
 }

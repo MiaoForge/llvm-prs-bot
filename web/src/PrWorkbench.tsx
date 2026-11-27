@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Copy, GitPullRequest } from 'lucide-react'
 import { prIndexOptions, usePrDetail, type PrDetail, type Summary } from './snapshot'
@@ -34,14 +33,14 @@ export function PrWorkbench({ summary, moduleId, reload, busy }: WorkbenchProps)
         <SelectFilter label="CI" options={ciChoices} value={params.get('ci') ?? 'all'} change={setFilter('ci')} />
         <SelectFilter label="Mergeability" options={mergeChoices} value={params.get('merge') ?? 'all'} change={setFilter('merge')} />
         <SelectFilter label="Human inactivity" options={inactiveChoices} value={params.get('inactive') ?? 'all'} change={setFilter('inactive')} />
-        <SelectFilter label="Sort" options={prSorts} value={params.get('sort') ?? 'priority'} change={setFilter('sort')} />
+        <SelectFilter label="Sort" options={prSorts} value={params.get('sort') ?? 'priority'} change={value => update({ sort: value })} />
       </div>
       {index.data && <span className="result-count">Showing {rows.length} of {index.data.items.length} PRs</span>}
     </div>
+    {index.error && <LoadError error={index.error} reload={reload} busy={busy} retry={index.refetch} />}
     <div className={`split-pr ${selected !== null ? 'has-detail' : ''}`}>
-      <div className="pane-list" aria-label="Pull requests" {...navigation}>
+      <div className="pane-list" aria-label="Pull requests" ref={navigation.list}>
         {index.isPending && <Loading>Loading pull requests…</Loading>}
-        {index.error && <LoadError error={index.error} reload={reload} busy={busy} retry={index.refetch} />}
         {index.data && rows.length === 0 && <EmptyList reset={reset} />}
         {rows.map(pr => <button key={pr.id} data-item={pr.id}
           aria-current={selected === pr.id ? 'true' : undefined} onClick={() => select(pr.id)}
@@ -58,8 +57,9 @@ export function PrWorkbench({ summary, moduleId, reload, busy }: WorkbenchProps)
           </span></span>
         </button>)}
       </div>
-      <section className="inspector item-detail" aria-label="Pull request details">
-        {selected !== null && <div className="detail-close"><DetailClose close={() => select(null)} /></div>}
+      <section className="inspector item-detail" aria-label="Pull request details" ref={navigation.detail}>
+        {selected !== null && <div className="detail-close"><DetailClose close={navigation.close} /></div>}
+        {selected !== null && index.isPending && <Loading>Loading pull requests…</Loading>}
         {selected === null && <div className="state-message"><GitPullRequest className="ic" /><p>Select a pull request to inspect its current HEAD and review history.</p></div>}
         {selected !== null && index.data && !selectedRow && <div className="state-message">
           <p>Pull request #{selected} is outside this module in the current snapshot.</p>
@@ -79,7 +79,8 @@ function PrInspector({ summary, id, reload, busy }: Omit<WorkbenchProps, 'module
 }
 
 function PrEvidence({ pr }: { pr: PrDetail }) {
-  const [humanOnly, setHumanOnly] = useState(true)
+  const { params, update } = useFilters()
+  const humanOnly = params.get('bots') !== '1'
   const events = pr.timeline.filter(event => !humanOnly || !event.isBot)
     .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
   const sha = (value: string) => <code title={value}>{value.slice(0, 12)}</code>
@@ -130,7 +131,7 @@ function PrEvidence({ pr }: { pr: PrDetail }) {
     </section>
     <section>
       <div className="sec-h"><h3>Timeline</h3><label className="toggle-pill">
-        <input type="checkbox" checked={humanOnly} onChange={event => setHumanOnly(event.target.checked)} /> Human only
+        <input type="checkbox" checked={humanOnly} onChange={event => update({ bots: event.target.checked ? null : '1' })} /> Human only
       </label></div>
       <p className="evidence-meta">Last human {utc(pr.lastHumanActivityAt)} · Last bot {utc(pr.lastBotActivityAt)}</p>
       {events.length === 0 ? <p className="muted">No matching timeline events.</p> : <ol className="timeline">

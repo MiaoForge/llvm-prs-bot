@@ -7,6 +7,7 @@ import { issueIndexOptions, prIndexOptions, SnapshotError, summaryOptions, type 
 import { issueQueues, prQueues, searchMatch, useFilters, workbenchLink } from './state'
 import { LoadError, Loading, utc } from './ui'
 import { PrWorkbench } from './PrWorkbench'
+import { IssueWorkbench } from './IssueWorkbench'
 import { Overview } from './Overview'
 import { ThemePicker } from './theme'
 
@@ -25,9 +26,10 @@ export function App({ queryClient = client }: { queryClient?: QueryClient }) {
 function Workbench({ queryClient }: { queryClient: QueryClient }) {
   const location = useLocation()
   const { params } = useFilters()
+  const requestedModule = params.get('module')
   const summaryQuery = useQuery(summaryOptions)
   const summary = summaryQuery.data
-  const module = summary?.modules.find(entry => entry.id === params.get('module'))
+  const module = summary?.modules.find(entry => entry.id === requestedModule)
     ?? summary?.modules.find(entry => entry.id === 'clang-sema') ?? summary?.modules[0]
   const view = location.pathname === '/prs' ? 'prs' : location.pathname === '/issues' ? 'issues' : 'overview'
   const queue = params.get('queue')
@@ -66,7 +68,7 @@ function Workbench({ queryClient }: { queryClient: QueryClient }) {
     <aside className="sidebar" aria-label="Workbench sidebar">
       <div className="sb-top">
         <Link className="brand" to={workbenchLink('overview', module?.id)}>
-          <span className="brand-l"><span className="logo">LL</span><span className="brand-name">LLVM Triage</span></span>
+          <span className="brand-l"><span className="logo" aria-hidden="true">LL</span><span className="brand-name">LLVM Triage</span></span>
           <span className="pilot-pill">Pilot</span>
         </Link>
         <button className="search-trigger" onClick={() => setSearchOpen(true)} ref={searchTrigger} disabled={!module}>
@@ -125,10 +127,13 @@ function Workbench({ queryClient }: { queryClient: QueryClient }) {
       {summaryQuery.isPending && <Loading>Loading snapshot…</Loading>}
       {summaryQuery.error && <LoadError error={summaryQuery.error} retry={reload} busy={summaryQuery.isFetching} />}
       {summary && !module && <div className="state-message">This snapshot has no modules.</div>}
+      {requestedModule && module && module.id !== requestedModule && <p className="state-message" role="status">
+        The requested module is unavailable in this snapshot. Showing {module.name}.
+      </p>}
       {summary && module && <Routes>
         <Route path="/" element={<Overview summary={summary} moduleId={module.id} reload={reload} busy={summaryQuery.isFetching} />} />
         <Route path="/prs" element={<PrWorkbench key={module.id} summary={summary} moduleId={module.id} reload={reload} busy={summaryQuery.isFetching} />} />
-        <Route path="/issues" element={<div className="state-message">Issue Verification</div>} />
+        <Route path="/issues" element={<IssueWorkbench key={module.id} summary={summary} moduleId={module.id} reload={reload} busy={summaryQuery.isFetching} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>}
     </main>

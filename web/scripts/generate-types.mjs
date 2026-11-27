@@ -20,7 +20,7 @@ function inlineShared(value) {
   if ($ref) {
     const key = $ref.replace(/^common\.schema\.json#\/\$defs\//, '')
     if (!Object.hasOwn(common.$defs, key)) throw new Error('Unresolved reference: ' + $ref)
-    return inlineShared({ ...common.$defs[key], ...siblings })
+    return inlineShared({ ...common.$defs[key], ...siblings, ...(siblings.unevaluatedProperties === false && { additionalProperties: false }) })
   }
   return Object.fromEntries(Object.entries(siblings).map(([key, child]) => [key, inlineShared(child)]))
 }
