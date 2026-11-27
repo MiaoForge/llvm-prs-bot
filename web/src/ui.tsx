@@ -37,8 +37,8 @@ export function ModuleEvidence({
 }) {
   if (!evidence?.length) return null
   return (
-    <section aria-label="Module Evidence">
-      <h3 className="sec-h">Module Evidence</h3>
+    <section className="callout mut" aria-label="Module Evidence">
+      <h3 className="callout-h">Module Evidence</h3>
       <dl className="grid gap-3 text-xs">
         {evidence.map(({ moduleId, matchedPaths, matchedLabels }) => (
           <div key={moduleId}>
@@ -48,7 +48,7 @@ export function ModuleEvidence({
             {matchedPaths?.length ? (
               <dd className="mt-1">
                 Matched paths
-                <ul className="list-disc pl-5">
+                <ul className="mt-1 list-disc pl-5">
                   {matchedPaths.map((path) => (
                     <li key={path}>
                       <code className="break-all">{path}</code>
