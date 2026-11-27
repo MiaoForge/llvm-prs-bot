@@ -81,6 +81,23 @@ test("rejects invalid staging data before changing the published summary", (cont
   assert.throws(() => buildSnapshot({ ...input, snapshotId: "../../escape" }, out), /pattern/);
 });
 
+test("requires both detail arrays before replacing the published summary", (context) => {
+  const out = outputFor(context);
+  buildSnapshot(input, out);
+  const summary = join(out, "summary.json");
+  const previous = readFileSync(summary);
+  for (const field of ["prs", "issues"]) {
+    const incomplete = { ...input, snapshotId: "incomplete" };
+    delete incomplete[field];
+    assert.throws(() => buildSnapshot(incomplete, out), new RegExp("explicit " + field + " array"));
+    assert.throws(() => buildSnapshot({ ...incomplete, [field]: null }, out),
+      new RegExp("explicit " + field + " array"));
+    assert.deepEqual(readFileSync(summary), previous);
+    assert.equal(existsSync(join(out, "snapshots/incomplete")), false);
+  }
+  assert.equal(buildSnapshot({ ...input, snapshotId: "empty", prs: [], issues: [] }, out).kpis.issueTotal, 0);
+});
+
 test("rejects conflicting details and unconfigured module memberships", (context) => {
   const out = outputFor(context);
   assert.throws(() => buildSnapshot({ ...input, prs: [pr, { ...pr, title: "Drift" }] }, out),

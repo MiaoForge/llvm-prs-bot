@@ -21,8 +21,8 @@ export async function reverifyIssue(issue, { client, verifiedAt }) {
       }
     }
   }
-  const baselineVersionKnown = failures.baseline?.code === "compiler-unavailable"
-    ? false : issue.baselineVersionKnown ?? (issue.compilers?.baseline ? undefined : false);
+  const baselineVersionKnown = issue.baselineVersionKnown
+    ?? Boolean(issue.compilers?.baseline && failures.baseline?.code !== "compiler-unavailable");
   const detail = verifyIssue({ ...issue, runs, baselineVersionKnown,
     lastVerifiedAt: runs.baseline || runs.trunk ? verifiedAt : null });
   return { detail, failures };

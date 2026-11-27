@@ -103,6 +103,30 @@ test("treats a missing compiler version and a truncated diagnostic as insufficie
   assert.deepEqual(detail.missingEvidence, ["baseline-run", "trunk-outcome", "baseline-version"]);
 });
 
+test("keeps an identified historical version when its compiler is unavailable", async () => {
+  const client = createCompilerExplorerClient({
+    fetchImpl: async (_url, request) => request.method === "GET" ? Response.json(catalog.slice(1))
+      : Response.json({ code: 0, stderr: [], stdout: [] }),
+  });
+  const { detail, failures } = await reverifyIssue({ ...entry, baselineVersionKnown: true },
+    { client, verifiedAt });
+  assert.equal(failures.baseline.code, "compiler-unavailable");
+  assert.equal(detail.baseline, null);
+  assert.deepEqual(detail.missingEvidence, ["baseline-run"]);
+});
+
+test("records an unidentified historical version separately from its missing run", async () => {
+  const client = createCompilerExplorerClient({
+    fetchImpl: async (_url, request) => request.method === "GET" ? Response.json(catalog)
+      : Response.json({ code: 0, stderr: [], stdout: [] }),
+  });
+  const { detail, failures } = await reverifyIssue({
+    ...entry, baselineVersionKnown: false, compilers: { trunk: entry.compilers.trunk },
+  }, { client, verifiedAt });
+  assert.deepEqual(failures, {});
+  assert.deepEqual(detail.missingEvidence, ["baseline-run", "baseline-version"]);
+});
+
 test("skips network requests when the repro is incomplete", async () => {
   const client = createCompilerExplorerClient({ fetchImpl: () => assert.fail("unexpected request") });
   const { detail, failures } = await reverifyIssue({ ...entry, repro: { ...repro, compileArgs: null } },

@@ -92,6 +92,28 @@ test("ignores bot activity for first review and inactivity", () => {
   assert.equal(triage({ events: [], reviewsComplete: false }).queues.includes("awaiting-first-review"), false);
 });
 
+test("counts a known human author's creation when there are no later events", () => {
+  const pr = triage({ authorIsBot: false });
+  assert.equal(pr.lastHumanActivityAt, pr.createdAt);
+  assert.equal(pr.lastBotActivityAt, null);
+  assert.equal(pr.queues.includes("long-inactive"), true);
+  assert.ok(pr.reasonEvidenceUrls.includes(pr.url));
+});
+
+test("keeps the same inactivity timestamp with bot-only follow-up activity", () => {
+  const bot = event("26", "label", "automation", null, { isBot: true });
+  const humanAuthor = triage({ authorIsBot: false, events: [bot] });
+  assert.equal(humanAuthor.lastHumanActivityAt, humanAuthor.createdAt);
+  assert.equal(humanAuthor.lastBotActivityAt, bot.at);
+  assert.equal(humanAuthor.queues.includes("long-inactive"), true);
+  for (const authorIsBot of [true, undefined]) {
+    const pr = triage({ authorIsBot, events: [bot] });
+    assert.equal(pr.lastHumanActivityAt, null);
+    assert.equal(pr.lastBotActivityAt, bot.at);
+    assert.equal(pr.queues.includes("long-inactive"), false);
+  }
+});
+
 test("binds CI to required observations on HEAD and preserves unknown coverage", () => {
   const checks = [check("failing", oldSha), check("failing", headSha, false), check("passing", headSha)];
   const pr = triage({ checks, requiredChecksComplete: false });

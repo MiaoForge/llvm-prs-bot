@@ -42,8 +42,13 @@ function installShards(staged, target, files) {
 }
 
 export function buildSnapshot(input, outputDirectory) {
+  for (const field of ["prs", "issues"]) {
+    if (!Object.hasOwn(input, field) || !Array.isArray(input[field])) {
+      throw new TypeError("Snapshot input requires an explicit " + field + " array");
+    }
+  }
   const { snapshotId, generatedAt, githubSyncedAt = null, trunkCompilerVersion = null,
-    prs = [], issues = [], modules = clangModules } = input;
+    prs, issues, modules = clangModules } = input;
   const metadata = { schemaVersion: 1, snapshotId };
   const prItems = registerItems(prs, "pr", metadata);
   const issueItems = registerItems(issues, "issue", metadata);

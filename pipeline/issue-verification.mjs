@@ -46,11 +46,12 @@ export function verifyIssue(record) {
   };
   const baseline = record.runs?.baseline ?? null;
   const trunk = record.runs?.trunk ?? null;
+  const reportedCrashSignature = kind === "crash" ? record.reportedCrashSignature ?? null : null;
   const crashSignature = source === "generated-by-fuzzer" && kind === "crash"
     ? [baseline, trunk].filter((run) => run?.outcome === "reported-symptom")
       .map((run) => extractCrashSignature(run.diagnostics)).find(Boolean)
-      ?? record.reportedCrashSignature ?? null
-    : null;
+      ?? reportedCrashSignature
+    : reportedCrashSignature;
   const runs = { baseline, trunk };
   const fixAttribution = record.fixAttribution ?? { status: "unknown" };
   const lastVerifiedAt = record.lastVerifiedAt ?? null;

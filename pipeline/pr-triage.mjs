@@ -78,6 +78,7 @@ export function triagePr(input, {
   const events = [...pr.events].sort((left, right) => Date.parse(left.at) - Date.parse(right.at));
   const human = events.filter((event) => !event.isBot);
   const lastHuman = human.at(-1);
+  const lastHumanActivityAt = lastHuman?.at ?? (pr.authorIsBot === false ? createdAt : null);
   const lastBot = events.findLast((event) => event.isBot);
   const latestReview = effectiveReviews(events);
   const approval = latestReview.findLast((review) => review.reviewState === "approved"
@@ -119,7 +120,8 @@ export function triagePr(input, {
     signals.push({ queue: "awaiting-first-review", priority: 50,
       reason: "No human review is recorded.", urls: [url] });
   }
-  if (Date.parse(now) - Date.parse(lastHuman?.at ?? createdAt) >= inactivityDays * DAY_MS) {
+  if (lastHumanActivityAt !== null
+      && Date.parse(now) - Date.parse(lastHumanActivityAt) >= inactivityDays * DAY_MS) {
     signals.push({ queue: "long-inactive", priority: 25,
       reason: `No human activity for at least ${inactivityDays} days.`, urls: [lastHuman?.url ?? url] });
   }
@@ -129,7 +131,7 @@ export function triagePr(input, {
   return {
     id, title, url, author, createdAt, headSha, moduleIds, requestedReviewers,
     headReview, headCi, latestApproval, commitsSinceApproval, requiredChecks,
-    lastHumanActivityAt: lastHuman?.at ?? null,
+    lastHumanActivityAt,
     lastBotActivityAt: lastBot?.at ?? null,
     mergeability: pr.mergeability ?? "unknown",
     unresolvedDiscussionCount: pr.unresolvedDiscussionCount ?? null,

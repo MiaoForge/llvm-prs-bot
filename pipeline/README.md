@@ -25,7 +25,10 @@ available, `commitsAheadBySha` supplies proven positive ancestry distances
 relative to the current HEAD.
 
 Pass a fixed `now` for inactivity calculations. The threshold defaults to
-180 days. `reviewerHistory` contains prior reviews with `prId`, `login`,
+180 days. Set `authorIsBot: false` when a human opened the PR. Creation then
+counts as human activity when the timeline has no human events. Without a
+known human activity timestamp, the PR is excluded from the inactivity queue.
+`reviewerHistory` contains prior reviews with `prId`, `login`,
 `isBot`, `paths`, optional `labels`, and the review `url`. Suggestions favor
 exact touched paths over module-only matches and count each historical PR once
 per reviewer.
@@ -51,6 +54,9 @@ case-sensitive `diagnosticIncludes` marker and optional `exitCode`. Supply
 `expectations.expected` with an exit code or a diagnostic marker and,
 optionally, a `diagnosticExcludes` marker. An ambiguous or truncated result
 remains unknown. Existing links can be supplied through `godboltUrls`.
+A known historical version (`baselineVersionKnown: true`) remains known if a
+compile attempt fails. An explicitly supplied `reportedCrashSignature` is
+retained for crash reports of any source.
 
 `createCompilerExplorerClient` bounds requests with a per-client budget
 (12 by default, including compiler discovery) and a per-request timeout
@@ -71,7 +77,8 @@ npm --prefix pipeline run validate -- /path/to/data
 ```
 
 The input JSON object contains `snapshotId`, `generatedAt`, and the
-`prs` and `issues` detail arrays produced by the rules. It can also supply
+`prs` and `issues` detail arrays produced by the rules. Both arrays are required
+and may be explicitly empty. The input can also supply
 `githubSyncedAt`, `trunkCompilerVersion`, and `modules` (ID and name pairs).
 Omitted module definitions use Clang Sema and AST. The builder deduplicates
 identical items of the same kind and ID and rejects conflicting duplicates.

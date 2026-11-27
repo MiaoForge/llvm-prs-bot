@@ -1,9 +1,12 @@
 name: GitHub Pages
 
 on:
-  schedule:
-    - cron: '17 3 * * *'
   workflow_dispatch:
+    inputs:
+      snapshot_id:
+        description: Snapshot ID in the checked-in data/summary.json
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -19,6 +22,8 @@ jobs:
     permissions:
       contents: read
       pages: read
+    env:
+      EXPECTED_SNAPSHOT_ID: ${{ inputs.snapshot_id }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -33,12 +38,17 @@ jobs:
       - uses: actions/configure-pages@v5
         id: pages
       - run: npm ci --prefix pipeline
-      - run: npm --prefix pipeline run validate
+      # A production workflow can generate data/ from collected inputs here.
+      # Manual dispatch currently publishes a selected checked-in snapshot.
+      - name: Validate selected snapshot
+        run: node pipeline/validate-snapshot.mjs data "$EXPECTED_SNAPSHOT_ID"
       - run: npm ci --prefix web
       - name: Build workbench
         run: npm --prefix web run build
         env:
           VITE_BASE_PATH: ${{ format('{0}/', steps.pages.outputs.base_path) }}
+      - name: Verify packaged snapshot
+        run: node pipeline/validate-snapshot.mjs web/dist/data "$EXPECTED_SNAPSHOT_ID"
       - uses: actions/upload-pages-artifact@v4
         with:
           path: web/dist

@@ -39,8 +39,8 @@ runs pipeline and web tests, typechecks the web app, and checks a project-site
 build with the repository as its URL base path.
 
 Enable **GitHub Actions** as the Pages source in the repository settings to
-deploy. The Pages workflow builds from the default branch at 03:17 UTC daily
-and on manual dispatch. It validates the checked-in snapshot and builds with
-the configured Pages base path before uploading `web/dist`. The committed
-snapshot is currently synthetic. Supplying and committing a newer snapshot is
-a separate pipeline operation.
+deploy. Run the Pages workflow manually from the default branch and provide the
+`snapshot_id` from `data/summary.json`. It validates that ID and the complete
+snapshot both before and after the Pages build. The current checked-in
+snapshot is a demo. A future production workflow can build `data/` from
+collected upstream inputs before these checks.

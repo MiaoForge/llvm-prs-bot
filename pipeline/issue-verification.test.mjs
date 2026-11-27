@@ -70,6 +70,19 @@ test("requires a crash signature for conclusive fuzzer crash comparisons", () =>
   assert.equal(extractCrashSignature("PLEASE submit a bug report\n " + assertion), assertion);
 });
 
+test("retains a human-reported crash signature without requiring it for a conclusion", () => {
+  const runs = { baseline: run("reported-symptom", assertion, 134),
+    trunk: run("expected-behavior", "", 0) };
+  const detail = issue({ kind: "crash", reportedCrashSignature: assertion, runs });
+  assert.equal(detail.source, "human-reported");
+  assert.equal(detail.crashSignature, assertion);
+  assert.equal(detail.conclusion, "close-candidate");
+  const withoutSignature = issue({ kind: "crash", runs });
+  assert.equal(withoutSignature.crashSignature, null);
+  assert.deepEqual(withoutSignature.missingEvidence, []);
+  assert.equal(withoutSignature.conclusion, "close-candidate");
+});
+
 test("keeps fix attribution independent of the version comparison", () => {
   const fixAttribution = {
     status: "candidate", commitSha: "a".repeat(40),
