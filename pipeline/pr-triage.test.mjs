@@ -125,7 +125,7 @@ test('uses commit metadata only as SHA evidence', () => {
   assert.deepEqual(pr.reasonEvidenceUrls, [changes.url, commit.url])
   assert.ok(pr.reason.includes(headSha))
   assert.doesNotMatch(pr.reason, /pushed/)
-  assert.equal(pr.lastHumanActivityAt, changes.at)
+  assert.equal(pr.lastHumanActivityAt, null)
 })
 
 test('ignores bot activity for first review and inactivity', () => {

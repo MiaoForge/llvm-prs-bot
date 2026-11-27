@@ -97,17 +97,30 @@ export function triagePr(
   const { id, title, url, author, createdAt, headSha, requestedReviewers } = pr
   const events = [...pr.events].sort((left, right) => Date.parse(left.at) - Date.parse(right.at))
   const activityEvents = events.filter((event) => event.kind !== 'commit' || event.isPush === true)
+  const headPush = activityEvents.findLast(
+    (event) => event.kind === 'commit' && event.isPush === true && event.commitSha === headSha,
+  )
+  const headCommit = events.findLast(
+    (event) => event.kind === 'commit' && event.commitSha === headSha,
+  )
   const human = activityEvents.filter((event) => !event.isBot)
   const lastHuman = human.at(-1)
+  const lastKnownHumanActivityAt = lastHuman?.at ?? (pr.authorIsBot === false ? createdAt : null)
+  // A newer human commit does not date the push, but it makes the old activity date uncertain.
+  const unattributedUpdate =
+    !headPush &&
+    headCommit &&
+    !headCommit.isBot &&
+    lastKnownHumanActivityAt !== null &&
+    Date.parse(headCommit.at) > Date.parse(lastKnownHumanActivityAt)
   const activityComplete = [
     pr.reviewsComplete,
     pr.commentsComplete,
     pr.commitsComplete,
     pr.timelineComplete,
   ].every((complete) => complete === true)
-  const lastHumanActivityAt = activityComplete
-    ? (lastHuman?.at ?? (pr.authorIsBot === false ? createdAt : null))
-    : null
+  const lastHumanActivityAt =
+    activityComplete && !unattributedUpdate ? lastKnownHumanActivityAt : null
   const lastBot = activityEvents.findLast((event) => event.isBot)
   const latestReview = effectiveReviews(events)
   const approval = latestReview.findLast(
@@ -138,13 +151,9 @@ export function triagePr(
   }
 
   const changes = latestReview.findLast((review) => review.reviewState === 'changes-requested')
-  const headPush = activityEvents.findLast(
-    (event) => event.kind === 'commit' && event.isPush === true && event.commitSha === headSha,
-  )
   const authorPush =
     headPush && !headPush.isBot && sameLogin(headPush.actor, author) ? headPush : null
-  const headEvidence =
-    events.findLast((event) => event.kind === 'commit' && event.commitSha === headSha)?.url ?? url
+  const headEvidence = headCommit?.url ?? url
   const mergeHelp = human.findLast(
     (event) =>
       event.kind === 'comment' && event.mergeHelpRequested && sameLogin(event.actor, author),

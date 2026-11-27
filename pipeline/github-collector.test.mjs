@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { createGitHubCollector } from './github-collector.mjs'
-import { normalizeIssue } from './github-normalize.mjs'
+import { normalizeIssue, normalizePull } from './github-normalize.mjs'
 import { triagePr } from './pr-triage.mjs'
 import { extractReproducer, supportsCompileArgs } from './reproducer.mjs'
 
@@ -271,4 +271,59 @@ test('does not convert Git author and committer metadata into a push event', asy
   assert.ok(pr.reason.includes(head))
   assert.doesNotMatch(pr.reason, /pushed/)
   assert.ok(pr.reasonEvidenceUrls.includes(commit.url))
+})
+
+test('keeps human activity unknown for a newer HEAD without an observed push', () => {
+  const createdAt = '2025-01-01T00:00:00Z'
+  const committedAt = '2026-11-26T00:00:00Z'
+  const commitUrl = `${url}/commit/${head}`
+  const pull = {
+    number: 1,
+    title: 'Sema change',
+    html_url: url,
+    user: human,
+    created_at: createdAt,
+    head: { sha: head },
+    labels: ['clang:sema'],
+  }
+  const observations = {
+    files: [],
+    reviews: [],
+    comments: [],
+    checks: [],
+    pushes: [],
+    reviewsComplete: true,
+    commentsComplete: true,
+    commitsComplete: true,
+    timelineComplete: true,
+    commits: [
+      {
+        sha: head,
+        author: human,
+        committer: human,
+        html_url: commitUrl,
+        commit: { committer: { date: committedAt } },
+      },
+    ],
+  }
+  const pr = triagePr(normalizePull(pull, observations), { now: '2026-11-27T00:00:00Z' })
+  assert.equal(pr.lastHumanActivityAt, null)
+  assert.ok(!pr.queues.includes('long-inactive'))
+  assert.deepEqual(
+    pr.timeline.map(({ at, commitSha, url }) => ({ at, commitSha, url })),
+    [{ at: committedAt, commitSha: head, url: commitUrl }],
+  )
+
+  const botOnly = triagePr(
+    normalizePull(pull, {
+      ...observations,
+      pushes: [
+        { actor: bot, created_at: committedAt, after_commit: { sha: head, html_url: commitUrl } },
+      ],
+    }),
+    { now: '2026-11-27T00:00:00Z' },
+  )
+  assert.equal(botOnly.lastHumanActivityAt, createdAt)
+  assert.equal(botOnly.lastBotActivityAt, committedAt)
+  assert.ok(botOnly.queues.includes('long-inactive'))
 })
