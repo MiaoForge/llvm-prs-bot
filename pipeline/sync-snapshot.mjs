@@ -11,7 +11,7 @@ import {
 } from './compiler-explorer.mjs'
 import { selectClangCompilers } from './compiler-selection.mjs'
 import { createGitHubCollector, defaultGitHubOptions } from './github-collector.mjs'
-import { verifyIssue } from './issue-verification.mjs'
+import { issueSource, verifyIssue } from './issue-verification.mjs'
 import { triagePr } from './pr-triage.mjs'
 import { reverifyIssue } from './reverify-issue.mjs'
 import { supportsCompileArgs } from './reproducer.mjs'
@@ -40,21 +40,31 @@ function fingerprint(issue, baseline, trunk) {
     .digest('hex')
 }
 
+function isAutomatedDiagnostic(issue) {
+  return issue.kind === 'diagnostic' && issueSource(issue) !== 'generated-by-fuzzer'
+}
+
 function canVerify(issue) {
   const { repro, expectations } = issue
   return Boolean(
-    !issue.versionAmbiguous &&
+    isAutomatedDiagnostic(issue) &&
+      !issue.versionAmbiguous &&
       issue.language &&
       repro.sourceCode &&
       repro.expectedBehavior &&
       supportsCompileArgs(repro.compileArgs) &&
-      (expectations.reported.diagnosticIncludes || expectations.reported.crash === true) &&
+      expectations.reported.diagnosticIncludes &&
       Object.keys(expectations.expected).length > 0,
   )
 }
 
+function normalizeLineEndings(text) {
+  return text.replace(/\r\n/g, '\n')
+}
+
 async function hydrateFromShortlink(issue, client) {
   const { repro } = issue
+  if (!isAutomatedDiagnostic(issue)) return issue
   if (repro.sourceCode && repro.compileArgs != null) return issue
   const ids = new Set(
     (repro.reporterGodboltUrls ?? []).map(compilerExplorerShortId).filter(Boolean),
@@ -62,7 +72,22 @@ async function hydrateFromShortlink(issue, client) {
   if (ids.size !== 1) return issue
   const [shortId] = ids
   const session = await client.fetchShortlink(shortId)
-  if (!session || (issue.language && issue.language !== session.language)) return issue
+  if (!session) return issue
+  // Treat the shortlink session as an atomic unit: refuse to mix conflicting
+  // body and shortlink fields into an input the reporter never provided.
+  if (issue.language && issue.language !== session.language) return issue
+  if (
+    repro.sourceCode &&
+    normalizeLineEndings(repro.sourceCode) !== normalizeLineEndings(session.sourceCode)
+  ) {
+    return issue
+  }
+  if (
+    repro.compileArgs != null &&
+    JSON.stringify(repro.compileArgs) !== JSON.stringify(session.compileArgs)
+  ) {
+    return issue
+  }
   return {
     ...issue,
     language: session.language,

@@ -85,6 +85,7 @@ function transports({
   coarseOnlyPr = false,
   expectedWarning = false,
   crash,
+  shortlinkDiag,
   requestBudget,
 } = {}) {
   const compilations = []
@@ -139,6 +140,19 @@ function transports({
             labels: [...item.labels, { name: 'generated-by-fuzzer' }],
           })
         }
+        if (shortlinkDiag) {
+          const lines = [
+            shortlinkDiag.inlineSource ? `\`\`\`cpp\n${shortlinkDiag.inlineSource}\n\`\`\`` : '',
+            'error: unexpected diagnostic',
+            `Compiler Explorer: ${crashLink}`,
+            'Expected behavior: should compile',
+          ].filter(Boolean)
+          return response({
+            ...item,
+            number,
+            body: lines.join('\n'),
+          })
+        }
         const body = [
           number === 3 ? 'Clang 21.1.0' : 'Clang frontend',
           cIssue && number === 2 ? '```c' : '```cpp',
@@ -173,15 +187,16 @@ function transports({
       assert.equal(url.origin, 'https://ce.example.invalid')
       if (url.pathname === '/api/shortlinkinfo/crashFixture') {
         assert.equal(request.method, 'GET')
+        const cfg = shortlinkDiag ?? crash ?? {}
         const editor = {
           language: 'c++',
-          source: crashSource,
+          source: cfg.sessionSource ?? crashSource,
           compilers: [
-            { id: 'clang_assertions_trunk', options: '-std=c++20' },
-            ...(crash.release ? [{ id: 'clang120assert', options: '-ferror-limit=0' }] : []),
+            { id: 'clang_trunk', options: '-std=c++20' },
+            ...(cfg.release ? [{ id: 'clang2110', options: '-std=c++17' }] : []),
           ],
         }
-        return response({ sessions: crash.multiple ? [editor, editor] : [editor] })
+        return response({ sessions: cfg.multiple ? [editor, editor] : [editor] })
       }
       if (request.method === 'GET') {
         const entries = url.pathname.endsWith('/c') ? cCatalog : nextCatalog
@@ -329,31 +344,59 @@ test('uses the C catalog and excludes unsupported expectations and broad-only PR
   )
 })
 
-test('compares a fuzzer shortlink on the reported release or the Clang 22 baseline', async (context) => {
-  for (const [crash, baseline, conclusion] of [
-    [{ release: true }, 'clang120assert', 'close-candidate'],
-    [{ trunkCrash: true }, 'clang2212', 'still-reproducible'],
+test('hydrates diagnostic shortlinks and skips automated compilation for crash or fuzzer issues', async (context) => {
+  const output = snapshotDirectory(context)
+  const diag = await sync(output, 27, {
+    shortlinkDiag: { release: true, sessionSource: 'int from_shortlink;\n' },
+    issueNumbers: [2],
+    requestBudget: 5,
+  })
+  assert.deepEqual(diag.warnings, [])
+  assert.deepEqual(diag.compilations, ['clang2110', 'clang_trunk'])
+  assert.equal(diag.input.issues[0].conclusion, 'close-candidate')
+  assert.equal(diag.input.issues[0].repro.sourceCode, 'int from_shortlink;\n')
+  assert.deepEqual(diag.input.issues[0].repro.compileArgs, ['-std=c++17'])
+  assert.deepEqual(diag.input.issues[0].repro.reporterGodboltUrls, [crashLink])
+
+  const fuzzerCrash = await sync(output, 28, {
+    crash: { release: true },
+    issueNumbers: [2],
+    requestBudget: 5,
+  })
+  assert.deepEqual(fuzzerCrash.compilations, [])
+  assert.equal(fuzzerCrash.attempted, 0)
+  assert.equal(fuzzerCrash.input.issues[0].conclusion, 'insufficient-evidence')
+  assert.equal(fuzzerCrash.input.issues[0].source, 'generated-by-fuzzer')
+  assert.deepEqual(fuzzerCrash.input.issues[0].repro.reporterGodboltUrls, [crashLink])
+})
+
+test('refuses to mix conflicting inline source with shortlink compiler arguments', async (context) => {
+  const output = snapshotDirectory(context)
+  for (const [day, inlineSource, sessionSource] of [
+    [27, 'int from_body;', 'int from_shortlink;'],
+    [28, 'static_assert(__LINE__ == 1);', '\nstatic_assert(__LINE__ == 1);\n'],
   ]) {
-    const output = snapshotDirectory(context)
-    const result = await sync(output, 27, { crash, issueNumbers: [2], requestBudget: 4 })
-    assert.deepEqual(result.warnings, [])
-    assert.deepEqual(result.compilations, [baseline, 'clang_trunk'])
-    const [issue] = result.input.issues
-    assert.equal(issue.conclusion, conclusion)
-    assert.equal(issue.source, 'generated-by-fuzzer')
-    assert.equal(issue.crashSignature, crashDiagnostic)
-    assert.equal(issue.runs.baseline.outcome, 'reported-symptom')
-    assert.equal(issue.runs.baseline.godboltUrl, null)
-    assert.equal(issue.repro.expectedBehavior, 'The compiler should not crash.')
-    assert.equal(issue.repro.sourceUrl, html_url)
+    const conflict = await sync(output, day, {
+      shortlinkDiag: { inlineSource, sessionSource },
+      issueNumbers: [2],
+      requestBudget: 5,
+    })
+    assert.deepEqual(conflict.compilations, [])
+    assert.equal(conflict.attempted, 0)
+    const [issue] = conflict.input.issues
+    assert.equal(issue.conclusion, 'insufficient-evidence')
+    assert.equal(issue.repro.sourceCode, `${inlineSource}\n`)
+    assert.equal(issue.repro.compileArgs, null)
     assert.deepEqual(issue.repro.reporterGodboltUrls, [crashLink])
-    assert.equal(validateSnapshot(output).issueTotal, 1)
   }
 })
 
 test('retains shortlink provenance when the budget is exhausted or the session is unsupported', async (context) => {
   const output = snapshotDirectory(context)
-  for (const config of [{ crash: {}, requestBudget: 1 }, { crash: { multiple: true } }]) {
+  for (const config of [
+    { shortlinkDiag: {}, requestBudget: 1 },
+    { shortlinkDiag: { multiple: true } },
+  ]) {
     const result = await sync(output, 27, { ...config, issueNumbers: [2] })
     const [issue] = result.input.issues
     assert.equal(issue.conclusion, 'insufficient-evidence')
