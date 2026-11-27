@@ -1,5 +1,5 @@
 import { deepStrictEqual } from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -74,10 +74,17 @@ function validatePr(pr, path) {
   for (const observation of [pr.headReview, pr.headCi, ...pr.requiredChecks]) {
     requireThat(observation.commitSha === pr.headSha, `${path}: HEAD evidence SHA mismatch`);
   }
+  const hasFailingCheck = pr.requiredChecks.some((check) => check.status === "failing");
+  requireThat(pr.headCi.status !== "passing" || !hasFailingCheck,
+    `${path}: passing HEAD CI conflicts with a failing required check`);
+
   if (pr.latestApproval === null) {
     requireThat(pr.commitsSinceApproval === null, `${path}: commit distance requires an approval`);
   } else if (pr.latestApproval.commitSha === pr.headSha) {
     requireThat(pr.commitsSinceApproval === 0, `${path}: HEAD approval requires zero new commits`);
+  } else {
+    requireThat(pr.commitsSinceApproval === null || pr.commitsSinceApproval >= 1,
+      `${path}: historical approval requires a positive or unknown commit distance`);
   }
 }
 
@@ -110,8 +117,13 @@ function validateIssue(issue, path) {
       [trunkOutcome === "unknown" || trunkOutcome === "different-behavior", "trunk-outcome"],
       [missingSignature, "crash-signature"],
     ]) {
-      requireThat(!absent || missing.includes(reason), `${path}: missingEvidence must include ${reason}`);
+      const requirement = absent ? "include" : "exclude";
+      requireThat(absent === missing.includes(reason),
+        `${path}: missingEvidence must ${requirement} ${reason}`);
     }
+    // Without a baseline run, the intended version may still be known.
+    requireThat(issue.baseline === null || !missing.includes("baseline-version"),
+      `${path}: missingEvidence must exclude baseline-version when a baseline run exists`);
     return;
   }
   const expected = issue.conclusion === "close-candidate" ? "expected-behavior" : "reported-symptom";
@@ -120,6 +132,25 @@ function validateIssue(issue, path) {
   requireThat(missing.length === 0 && !missingSignature,
     `${path}: a conclusive result requires complete evidence`);
   requireThat(issue.lastVerifiedAt !== null, `${path}: a conclusive result requires a verification time`);
+}
+
+function checkDetailInventory(directory, referencedFiles) {
+  let entries;
+  try {
+    entries = readdirSync(directory, { withFileTypes: true });
+  } catch (error) {
+    // An empty snapshot may omit its items directory.
+    if (error.code === "ENOENT" && referencedFiles.size === 0) {
+      return;
+    }
+    throw error;
+  }
+  const unreferenced = entries
+    .filter((entry) => (entry.isFile() || entry.isSymbolicLink()) && !referencedFiles.has(entry.name))
+    .map((entry) => entry.name)
+    .sort();
+  requireThat(unreferenced.length === 0,
+    `${directory}: unreferenced detail files: ${unreferenced.join(", ")}`);
 }
 
 function validateSnapshot(dir) {
@@ -143,6 +174,7 @@ function validateSnapshot(dir) {
   }
 
   const allItems = { pr: new Map(), issue: new Map() };
+  const referencedFiles = new Set();
   const modules = new Set();
   for (const module of summary.modules) {
     requireThat(!modules.has(module.id), `summary.json: duplicate module ${module.id}`);
@@ -163,9 +195,11 @@ function validateSnapshot(dir) {
         requireThat(row.moduleIds.includes(module.id), `${context}: missing current module membership`);
 
         if (!allItems[kind].has(row.id)) {
-          const detailPath = `items/${kind}-${row.id}.json`;
+          const detailFile = `${kind}-${row.id}.json`;
+          const detailPath = `items/${detailFile}`;
           const detail = checkedShard(detailPath, kind);
           validateDetail(detail, detailPath);
+          referencedFiles.add(detailFile);
           allItems[kind].set(row.id, { detail, indexedModules: [] });
         }
         const record = allItems[kind].get(row.id);
@@ -176,6 +210,7 @@ function validateSnapshot(dir) {
     }
     same(module.counts, countItems(moduleItems.pr, moduleItems.issue), `Module ${module.id}: counts disagree`);
   }
+  checkDetailInventory(join(root, "items"), referencedFiles);
 
   function uniqueRows(kind) {
     const rows = new Map();
