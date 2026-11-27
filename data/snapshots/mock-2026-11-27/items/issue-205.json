@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "snapshotId": "mock-2026-11-27",
+  "id": 205,
+  "title": "Report's diagnostic is absent on the stated baseline",
+  "url": "https://llvm.example.invalid/issues/205",
+  "moduleIds": [
+    "clang-sema"
+  ],
+  "source": "human-reported",
+  "kind": "diagnostic",
+  "originalReportAt": "2015-05-02T08:00:00Z",
+  "originalReportTracker": "bugzilla",
+  "lastHumanCommentAt": "2026-11-15T08:00:00Z",
+  "githubSyncedAt": "2026-11-27T08:00:00Z",
+  "lastVerifiedAt": "2026-11-26T08:00:00Z",
+  "conclusion": "insufficient-evidence",
+  "fixStatus": "unknown",
+  "baseline": {
+    "compilerVersion": "mock clang 6.0.0",
+    "outcome": "expected-behavior"
+  },
+  "trunk": {
+    "compilerVersion": "mock clang trunk (rev 123abcd)",
+    "outcome": "expected-behavior"
+  },
+  "repro": {
+    "sourceCode": "template<class T> constexpr int value = 1;\nstatic_assert(value<int> == 1);\n",
+    "compileArgs": [
+      "-std=c++17",
+      "-fsyntax-only"
+    ],
+    "expectedBehavior": "The compiler accepts the program.",
+    "sourceUrl": "https://llvm.example.invalid/issues/205#mock-report"
+  },
+  "runs": {
+    "baseline": {
+      "compilerId": "mock-clang-6",
+      "compilerVersion": "mock clang 6.0.0",
+      "outcome": "expected-behavior",
+      "exitCode": 0,
+      "diagnostics": "",
+      "godboltUrl": "https://godbolt.example.invalid/z/205-baseline"
+    },
+    "trunk": {
+      "compilerId": "mock-clang-trunk",
+      "compilerVersion": "mock clang trunk (rev 123abcd)",
+      "outcome": "expected-behavior",
+      "exitCode": 0,
+      "diagnostics": "",
+      "godboltUrl": "https://godbolt.example.invalid/z/205-trunk"
+    }
+  },
+  "fixAttribution": {
+    "status": "unknown"
+  },
+  "crashSignature": null,
+  "missingEvidence": [
+    "baseline-symptom"
+  ]
+}

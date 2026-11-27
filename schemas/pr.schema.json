@@ -1,0 +1,216 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llvm-prs-bot.invalid/schemas/v1/pr.schema.json",
+  "title": "PR detail",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "$ref": "common.schema.json#/$defs/schemaVersion"
+    },
+    "snapshotId": {
+      "$ref": "common.schema.json#/$defs/snapshotId"
+    },
+    "reasonEvidenceUrls": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/evidenceUrl"
+      },
+      "uniqueItems": true
+    },
+    "requestedReviewers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "login": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "user",
+              "team"
+            ]
+          },
+          "response": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "commented",
+              "approved",
+              "changes-requested",
+              "unknown"
+            ]
+          }
+        },
+        "required": [
+          "login",
+          "kind",
+          "response"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "suggestedReviewers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "login": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidenceUrls": {
+            "type": "array",
+            "items": {
+              "$ref": "common.schema.json#/$defs/evidenceUrl"
+            },
+            "uniqueItems": true,
+            "minItems": 1
+          }
+        },
+        "required": [
+          "login",
+          "reason",
+          "evidenceUrls"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "timeline": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "at": {
+            "$ref": "common.schema.json#/$defs/timestamp"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "commit",
+              "review",
+              "review-request",
+              "comment",
+              "check",
+              "label",
+              "other"
+            ]
+          },
+          "actor": {
+            "type": "string",
+            "minLength": 1
+          },
+          "isBot": {
+            "type": "boolean"
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          },
+          "url": {
+            "$ref": "common.schema.json#/$defs/evidenceUrl"
+          },
+          "commitSha": {
+            "anyOf": [
+              {
+                "$ref": "common.schema.json#/$defs/commitSha"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "at",
+          "kind",
+          "actor",
+          "isBot",
+          "description",
+          "url",
+          "commitSha"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "touchedPaths": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "requiredChecks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "passing",
+              "failing",
+              "pending",
+              "unknown"
+            ]
+          },
+          "commitSha": {
+            "$ref": "common.schema.json#/$defs/commitSha"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "$ref": "common.schema.json#/$defs/evidenceUrl"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "status",
+          "commitSha",
+          "url"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "unresolvedDiscussionUrls": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/$defs/evidenceUrl"
+      },
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "snapshotId",
+    "reasonEvidenceUrls",
+    "requestedReviewers",
+    "suggestedReviewers",
+    "timeline",
+    "touchedPaths",
+    "requiredChecks",
+    "unresolvedDiscussionUrls"
+  ],
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/prListFields"
+    }
+  ],
+  "unevaluatedProperties": false
+}

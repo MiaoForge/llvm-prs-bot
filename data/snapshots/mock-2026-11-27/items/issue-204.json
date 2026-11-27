@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "snapshotId": "mock-2026-11-27",
+  "id": 204,
+  "title": "Incorrect diagnostic with an unspecified language mode",
+  "url": "https://llvm.example.invalid/issues/204",
+  "moduleIds": [
+    "clang-sema"
+  ],
+  "source": "human-reported",
+  "kind": "diagnostic",
+  "originalReportAt": "2015-05-02T08:00:00Z",
+  "originalReportTracker": "bugzilla",
+  "lastHumanCommentAt": null,
+  "githubSyncedAt": "2026-11-27T08:00:00Z",
+  "lastVerifiedAt": null,
+  "conclusion": "insufficient-evidence",
+  "fixStatus": "unknown",
+  "baseline": null,
+  "trunk": null,
+  "repro": {
+    "sourceCode": "template<class T> constexpr int value = 1;\nstatic_assert(value<int> == 1);\n",
+    "compileArgs": null,
+    "expectedBehavior": "The compiler accepts the program.",
+    "sourceUrl": "https://llvm.example.invalid/issues/204#mock-report"
+  },
+  "runs": {
+    "baseline": null,
+    "trunk": null
+  },
+  "fixAttribution": {
+    "status": "unknown"
+  },
+  "crashSignature": null,
+  "missingEvidence": [
+    "compile-arguments",
+    "baseline-version",
+    "baseline-run",
+    "trunk-run"
+  ]
+}

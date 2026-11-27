@@ -1,0 +1,486 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llvm-prs-bot.invalid/schemas/v1/common.schema.json",
+  "title": "Shared snapshot definitions",
+  "$defs": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "snapshotId": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:[-_][a-z0-9]+)*$"
+    },
+    "moduleId": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "evidenceUrl": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://[^/]+"
+    },
+    "commitSha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "itemId": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "prQueue": {
+      "type": "string",
+      "enum": [
+        "approved-follow-up",
+        "awaiting-rereview",
+        "awaiting-first-review",
+        "long-inactive"
+      ]
+    },
+    "issueConclusion": {
+      "type": "string",
+      "enum": [
+        "close-candidate",
+        "still-reproducible",
+        "insufficient-evidence"
+      ]
+    },
+    "issueSource": {
+      "type": "string",
+      "enum": [
+        "human-reported",
+        "generated-by-fuzzer",
+        "unknown"
+      ]
+    },
+    "issueKind": {
+      "type": "string",
+      "enum": [
+        "diagnostic",
+        "crash",
+        "other",
+        "unknown"
+      ]
+    },
+    "fixStatus": {
+      "type": "string",
+      "enum": [
+        "unknown",
+        "candidate",
+        "confirmed"
+      ]
+    },
+    "comparisonOutcome": {
+      "type": "string",
+      "enum": [
+        "reported-symptom",
+        "expected-behavior",
+        "different-behavior",
+        "unknown"
+      ]
+    },
+    "counts": {
+      "type": "object",
+      "properties": {
+        "prTotal": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "issueTotal": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "prQueues": {
+          "type": "object",
+          "properties": {
+            "approved-follow-up": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "awaiting-rereview": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "awaiting-first-review": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "long-inactive": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "approved-follow-up",
+            "awaiting-rereview",
+            "awaiting-first-review",
+            "long-inactive"
+          ],
+          "additionalProperties": false
+        },
+        "issueConclusions": {
+          "type": "object",
+          "properties": {
+            "close-candidate": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "still-reproducible": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "insufficient-evidence": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "close-candidate",
+            "still-reproducible",
+            "insufficient-evidence"
+          ],
+          "additionalProperties": false
+        },
+        "generatedByFuzzer": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "prTotal",
+        "issueTotal",
+        "prQueues",
+        "issueConclusions",
+        "generatedByFuzzer"
+      ],
+      "additionalProperties": false
+    },
+    "prListFields": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/itemId"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "url": {
+          "$ref": "common.schema.json#/$defs/evidenceUrl"
+        },
+        "moduleIds": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/moduleId"
+          },
+          "uniqueItems": true,
+          "minItems": 1
+        },
+        "author": {
+          "type": "string",
+          "minLength": 1
+        },
+        "createdAt": {
+          "$ref": "common.schema.json#/$defs/timestamp"
+        },
+        "lastHumanActivityAt": {
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "lastBotActivityAt": {
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "queues": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/prQueue"
+          },
+          "uniqueItems": true
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "headSha": {
+          "$ref": "common.schema.json#/$defs/commitSha"
+        },
+        "headReview": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "approved",
+                "changes-requested",
+                "review-required",
+                "unknown"
+              ]
+            },
+            "commitSha": {
+              "$ref": "common.schema.json#/$defs/commitSha"
+            }
+          },
+          "required": [
+            "status",
+            "commitSha"
+          ],
+          "additionalProperties": false
+        },
+        "headCi": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "passing",
+                "failing",
+                "pending",
+                "unknown"
+              ]
+            },
+            "commitSha": {
+              "$ref": "common.schema.json#/$defs/commitSha"
+            }
+          },
+          "required": [
+            "status",
+            "commitSha"
+          ],
+          "additionalProperties": false
+        },
+        "latestApproval": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "commitSha": {
+                  "$ref": "common.schema.json#/$defs/commitSha"
+                },
+                "approvedAt": {
+                  "$ref": "common.schema.json#/$defs/timestamp"
+                }
+              },
+              "required": [
+                "commitSha",
+                "approvedAt"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "commitsSinceApproval": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mergeability": {
+          "type": "string",
+          "enum": [
+            "mergeable",
+            "conflicting",
+            "unknown"
+          ]
+        },
+        "unresolvedDiscussionCount": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mergeHelpRequested": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "url",
+        "moduleIds",
+        "author",
+        "createdAt",
+        "lastHumanActivityAt",
+        "lastBotActivityAt",
+        "queues",
+        "priority",
+        "reason",
+        "headSha",
+        "headReview",
+        "headCi",
+        "latestApproval",
+        "commitsSinceApproval",
+        "mergeability",
+        "unresolvedDiscussionCount",
+        "mergeHelpRequested"
+      ]
+    },
+    "issueListFields": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/$defs/itemId"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "url": {
+          "$ref": "common.schema.json#/$defs/evidenceUrl"
+        },
+        "moduleIds": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/moduleId"
+          },
+          "uniqueItems": true,
+          "minItems": 1
+        },
+        "source": {
+          "$ref": "common.schema.json#/$defs/issueSource"
+        },
+        "kind": {
+          "$ref": "common.schema.json#/$defs/issueKind"
+        },
+        "originalReportAt": {
+          "$ref": "common.schema.json#/$defs/timestamp"
+        },
+        "originalReportTracker": {
+          "type": "string",
+          "enum": [
+            "github",
+            "bugzilla",
+            "unknown"
+          ]
+        },
+        "lastHumanCommentAt": {
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "githubSyncedAt": {
+          "$ref": "common.schema.json#/$defs/timestamp"
+        },
+        "lastVerifiedAt": {
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "conclusion": {
+          "$ref": "common.schema.json#/$defs/issueConclusion"
+        },
+        "fixStatus": {
+          "$ref": "common.schema.json#/$defs/fixStatus"
+        },
+        "baseline": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "compilerVersion": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "outcome": {
+                  "$ref": "common.schema.json#/$defs/comparisonOutcome"
+                }
+              },
+              "required": [
+                "compilerVersion",
+                "outcome"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "trunk": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "compilerVersion": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "outcome": {
+                  "$ref": "common.schema.json#/$defs/comparisonOutcome"
+                }
+              },
+              "required": [
+                "compilerVersion",
+                "outcome"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "url",
+        "moduleIds",
+        "source",
+        "kind",
+        "originalReportAt",
+        "originalReportTracker",
+        "lastHumanCommentAt",
+        "githubSyncedAt",
+        "lastVerifiedAt",
+        "conclusion",
+        "fixStatus",
+        "baseline",
+        "trunk"
+      ]
+    }
+  }
+}

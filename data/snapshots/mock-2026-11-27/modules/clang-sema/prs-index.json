@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "snapshotId": "mock-2026-11-27",
+  "moduleId": "clang-sema",
+  "items": [
+    {
+      "id": 101,
+      "title": "[Clang][Sema] Preserve template substitution context",
+      "url": "https://llvm.example.invalid/pull/101",
+      "moduleIds": [
+        "clang-sema",
+        "clang-ast"
+      ],
+      "author": "mock-author",
+      "createdAt": "2025-12-01T08:00:00Z",
+      "lastHumanActivityAt": "2026-04-08T08:00:00Z",
+      "lastBotActivityAt": "2026-11-25T08:00:00Z",
+      "queues": [
+        "approved-follow-up",
+        "long-inactive"
+      ],
+      "priority": 100,
+      "reason": "Two commits landed after approval. The current head passes CI and awaits human review.",
+      "headSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "headReview": {
+        "status": "unknown",
+        "commitSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "headCi": {
+        "status": "passing",
+        "commitSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "latestApproval": {
+        "commitSha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "approvedAt": "2026-04-04T08:00:00Z"
+      },
+      "commitsSinceApproval": 2,
+      "mergeability": "mergeable",
+      "unresolvedDiscussionCount": 0,
+      "mergeHelpRequested": false
+    },
+    {
+      "id": 102,
+      "title": "[Clang][Sema] Handle a dependent type diagnostic",
+      "url": "https://llvm.example.invalid/pull/102",
+      "moduleIds": [
+        "clang-sema"
+      ],
+      "author": "mock-author",
+      "createdAt": "2026-11-19T08:00:00Z",
+      "lastHumanActivityAt": "2026-11-24T08:00:00Z",
+      "lastBotActivityAt": "2026-11-25T08:00:00Z",
+      "queues": [
+        "awaiting-rereview"
+      ],
+      "priority": 70,
+      "reason": "The author updated the PR after a request for changes. The required Clang check failed.",
+      "headSha": "cccccccccccccccccccccccccccccccccccccccc",
+      "headReview": {
+        "status": "review-required",
+        "commitSha": "cccccccccccccccccccccccccccccccccccccccc"
+      },
+      "headCi": {
+        "status": "failing",
+        "commitSha": "cccccccccccccccccccccccccccccccccccccccc"
+      },
+      "latestApproval": null,
+      "commitsSinceApproval": null,
+      "mergeability": "unknown",
+      "unresolvedDiscussionCount": 1,
+      "mergeHelpRequested": false
+    },
+    {
+      "id": 103,
+      "title": "[Clang][Sema] Clarify a failed deduction note",
+      "url": "https://llvm.example.invalid/pull/103",
+      "moduleIds": [
+        "clang-sema"
+      ],
+      "author": "mock-author",
+      "createdAt": "2026-11-19T08:00:00Z",
+      "lastHumanActivityAt": "2026-11-24T08:00:00Z",
+      "lastBotActivityAt": null,
+      "queues": [
+        "awaiting-first-review"
+      ],
+      "priority": 50,
+      "reason": "A human review is pending and the required-check state is unknown.",
+      "headSha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "headReview": {
+        "status": "review-required",
+        "commitSha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+      },
+      "headCi": {
+        "status": "unknown",
+        "commitSha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+      },
+      "latestApproval": null,
+      "commitsSinceApproval": null,
+      "mergeability": "conflicting",
+      "unresolvedDiscussionCount": null,
+      "mergeHelpRequested": false
+    },
+    {
+      "id": 104,
+      "title": "[Clang][Sema] Improve diagnostics for invalid traits",
+      "url": "https://llvm.example.invalid/pull/104",
+      "moduleIds": [
+        "clang-sema"
+      ],
+      "author": "mock-author",
+      "createdAt": "2026-11-19T08:00:00Z",
+      "lastHumanActivityAt": "2026-11-24T08:00:00Z",
+      "lastBotActivityAt": "2026-11-25T08:00:00Z",
+      "queues": [
+        "approved-follow-up"
+      ],
+      "priority": 90,
+      "reason": "The current head is approved and the author has asked for help merging.",
+      "headSha": "ffffffffffffffffffffffffffffffffffffffff",
+      "headReview": {
+        "status": "approved",
+        "commitSha": "ffffffffffffffffffffffffffffffffffffffff"
+      },
+      "headCi": {
+        "status": "passing",
+        "commitSha": "ffffffffffffffffffffffffffffffffffffffff"
+      },
+      "latestApproval": {
+        "commitSha": "ffffffffffffffffffffffffffffffffffffffff",
+        "approvedAt": "2026-11-23T08:00:00Z"
+      },
+      "commitsSinceApproval": 0,
+      "mergeability": "mergeable",
+      "unresolvedDiscussionCount": 0,
+      "mergeHelpRequested": true
+    }
+  ]
+}

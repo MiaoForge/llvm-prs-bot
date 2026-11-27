@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llvm-prs-bot.invalid/schemas/v1/issues-index.schema.json",
+  "title": "Issue module index",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "$ref": "common.schema.json#/$defs/schemaVersion"
+    },
+    "snapshotId": {
+      "$ref": "common.schema.json#/$defs/snapshotId"
+    },
+    "moduleId": {
+      "$ref": "common.schema.json#/$defs/moduleId"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "$ref": "common.schema.json#/$defs/issueListFields",
+        "unevaluatedProperties": false
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "snapshotId",
+    "moduleId",
+    "items"
+  ],
+  "additionalProperties": false
+}

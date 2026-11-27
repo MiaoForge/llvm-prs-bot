@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "snapshotId": "mock-2026-11-27",
+  "id": 104,
+  "title": "[Clang][Sema] Improve diagnostics for invalid traits",
+  "url": "https://llvm.example.invalid/pull/104",
+  "moduleIds": [
+    "clang-sema"
+  ],
+  "author": "mock-author",
+  "createdAt": "2026-11-19T08:00:00Z",
+  "lastHumanActivityAt": "2026-11-24T08:00:00Z",
+  "lastBotActivityAt": "2026-11-25T08:00:00Z",
+  "queues": [
+    "approved-follow-up"
+  ],
+  "priority": 90,
+  "reason": "The current head is approved and the author has asked for help merging.",
+  "headSha": "ffffffffffffffffffffffffffffffffffffffff",
+  "headReview": {
+    "status": "approved",
+    "commitSha": "ffffffffffffffffffffffffffffffffffffffff"
+  },
+  "headCi": {
+    "status": "passing",
+    "commitSha": "ffffffffffffffffffffffffffffffffffffffff"
+  },
+  "latestApproval": {
+    "commitSha": "ffffffffffffffffffffffffffffffffffffffff",
+    "approvedAt": "2026-11-23T08:00:00Z"
+  },
+  "commitsSinceApproval": 0,
+  "mergeability": "mergeable",
+  "unresolvedDiscussionCount": 0,
+  "mergeHelpRequested": true,
+  "reasonEvidenceUrls": [
+    "https://llvm.example.invalid/pull/104#mock-review",
+    "https://llvm.example.invalid/pull/104#mock-comment"
+  ],
+  "requestedReviewers": [],
+  "suggestedReviewers": [],
+  "timeline": [
+    {
+      "at": "2026-11-23T08:00:00Z",
+      "kind": "review",
+      "actor": "mock-contributor",
+      "isBot": false,
+      "description": "Approved the revision.",
+      "url": "https://llvm.example.invalid/pull/104#mock-review",
+      "commitSha": "ffffffffffffffffffffffffffffffffffffffff"
+    },
+    {
+      "at": "2026-11-24T08:00:00Z",
+      "kind": "comment",
+      "actor": "mock-contributor",
+      "isBot": false,
+      "description": "Asked for help merging.",
+      "url": "https://llvm.example.invalid/pull/104#mock-comment",
+      "commitSha": null
+    },
+    {
+      "at": "2026-11-25T08:00:00Z",
+      "kind": "check",
+      "actor": "mock-ci",
+      "isBot": true,
+      "description": "Clang tests: passing.",
+      "url": "https://llvm.example.invalid/pull/104#mock-check",
+      "commitSha": "ffffffffffffffffffffffffffffffffffffffff"
+    }
+  ],
+  "touchedPaths": [
+    "clang/lib/Sema/SemaTemplate.cpp"
+  ],
+  "requiredChecks": [
+    {
+      "name": "clang tests",
+      "status": "passing",
+      "commitSha": "ffffffffffffffffffffffffffffffffffffffff",
+      "url": "https://llvm.example.invalid/pull/104/checks"
+    }
+  ],
+  "unresolvedDiscussionUrls": []
+}

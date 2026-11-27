@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "snapshotId": "mock-2026-11-27",
+  "id": 103,
+  "title": "[Clang][Sema] Clarify a failed deduction note",
+  "url": "https://llvm.example.invalid/pull/103",
+  "moduleIds": [
+    "clang-sema"
+  ],
+  "author": "mock-author",
+  "createdAt": "2026-11-19T08:00:00Z",
+  "lastHumanActivityAt": "2026-11-24T08:00:00Z",
+  "lastBotActivityAt": null,
+  "queues": [
+    "awaiting-first-review"
+  ],
+  "priority": 50,
+  "reason": "A human review is pending and the required-check state is unknown.",
+  "headSha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "headReview": {
+    "status": "review-required",
+    "commitSha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+  },
+  "headCi": {
+    "status": "unknown",
+    "commitSha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+  },
+  "latestApproval": null,
+  "commitsSinceApproval": null,
+  "mergeability": "conflicting",
+  "unresolvedDiscussionCount": null,
+  "mergeHelpRequested": false,
+  "reasonEvidenceUrls": [
+    "https://llvm.example.invalid/pull/103#mock-commit"
+  ],
+  "requestedReviewers": [],
+  "suggestedReviewers": [],
+  "timeline": [
+    {
+      "at": "2026-11-24T08:00:00Z",
+      "kind": "commit",
+      "actor": "mock-contributor",
+      "isBot": false,
+      "description": "Pushed a revision.",
+      "url": "https://llvm.example.invalid/pull/103#mock-commit",
+      "commitSha": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+    }
+  ],
+  "touchedPaths": [
+    "clang/lib/Sema/SemaTemplate.cpp"
+  ],
+  "requiredChecks": [],
+  "unresolvedDiscussionUrls": []
+}

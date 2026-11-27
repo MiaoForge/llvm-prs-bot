@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "snapshotId": "mock-2026-11-27",
+  "id": 101,
+  "title": "[Clang][Sema] Preserve template substitution context",
+  "url": "https://llvm.example.invalid/pull/101",
+  "moduleIds": [
+    "clang-sema",
+    "clang-ast"
+  ],
+  "author": "mock-author",
+  "createdAt": "2025-12-01T08:00:00Z",
+  "lastHumanActivityAt": "2026-04-08T08:00:00Z",
+  "lastBotActivityAt": "2026-11-25T08:00:00Z",
+  "queues": [
+    "approved-follow-up",
+    "long-inactive"
+  ],
+  "priority": 100,
+  "reason": "Two commits landed after approval. The current head passes CI and awaits human review.",
+  "headSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "headReview": {
+    "status": "unknown",
+    "commitSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "headCi": {
+    "status": "passing",
+    "commitSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "latestApproval": {
+    "commitSha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "approvedAt": "2026-04-04T08:00:00Z"
+  },
+  "commitsSinceApproval": 2,
+  "mergeability": "mergeable",
+  "unresolvedDiscussionCount": 0,
+  "mergeHelpRequested": false,
+  "reasonEvidenceUrls": [
+    "https://llvm.example.invalid/pull/101#mock-review",
+    "https://llvm.example.invalid/pull/101#mock-commit"
+  ],
+  "requestedReviewers": [
+    {
+      "login": "mock-reviewer",
+      "kind": "user",
+      "response": "pending"
+    }
+  ],
+  "suggestedReviewers": [
+    {
+      "login": "mock-sema-maintainer",
+      "reason": "Reviewed template substitution changes in clang/lib/Sema.",
+      "evidenceUrls": [
+        "https://llvm.example.invalid/pull/90#mock-review"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "at": "2026-04-04T08:00:00Z",
+      "kind": "review",
+      "actor": "mock-contributor",
+      "isBot": false,
+      "description": "Approved the revision.",
+      "url": "https://llvm.example.invalid/pull/101#mock-review",
+      "commitSha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    {
+      "at": "2026-04-08T08:00:00Z",
+      "kind": "commit",
+      "actor": "mock-contributor",
+      "isBot": false,
+      "description": "Pushed two commits.",
+      "url": "https://llvm.example.invalid/pull/101#mock-commit",
+      "commitSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "at": "2026-11-25T08:00:00Z",
+      "kind": "check",
+      "actor": "mock-ci",
+      "isBot": true,
+      "description": "Clang tests: passing.",
+      "url": "https://llvm.example.invalid/pull/101#mock-check",
+      "commitSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  ],
+  "touchedPaths": [
+    "clang/lib/Sema/SemaTemplate.cpp",
+    "clang/lib/AST/ASTContext.cpp"
+  ],
+  "requiredChecks": [
+    {
+      "name": "clang tests",
+      "status": "passing",
+      "commitSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "url": "https://llvm.example.invalid/pull/101/checks"
+    }
+  ],
+  "unresolvedDiscussionUrls": []
+}

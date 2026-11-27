@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 1,
+  "snapshotId": "mock-2026-11-27",
+  "moduleId": "clang-sema",
+  "items": [
+    {
+      "id": 201,
+      "title": "Valid variable template is rejected",
+      "url": "https://llvm.example.invalid/issues/201",
+      "moduleIds": [
+        "clang-sema"
+      ],
+      "source": "human-reported",
+      "kind": "diagnostic",
+      "originalReportAt": "2015-05-02T08:00:00Z",
+      "originalReportTracker": "bugzilla",
+      "lastHumanCommentAt": "2026-11-15T08:00:00Z",
+      "githubSyncedAt": "2026-11-27T08:00:00Z",
+      "lastVerifiedAt": "2026-11-26T08:00:00Z",
+      "conclusion": "close-candidate",
+      "fixStatus": "confirmed",
+      "baseline": {
+        "compilerVersion": "mock clang 6.0.0",
+        "outcome": "reported-symptom"
+      },
+      "trunk": {
+        "compilerVersion": "mock clang trunk (rev 123abcd)",
+        "outcome": "expected-behavior"
+      }
+    },
+    {
+      "id": 202,
+      "title": "Sema assertion when checking a dependent call",
+      "url": "https://llvm.example.invalid/issues/202",
+      "moduleIds": [
+        "clang-sema",
+        "clang-ast"
+      ],
+      "source": "generated-by-fuzzer",
+      "kind": "crash",
+      "originalReportAt": "2024-07-05T12:00:00Z",
+      "originalReportTracker": "github",
+      "lastHumanCommentAt": "2026-11-15T08:00:00Z",
+      "githubSyncedAt": "2026-11-27T08:00:00Z",
+      "lastVerifiedAt": "2026-11-26T08:00:00Z",
+      "conclusion": "close-candidate",
+      "fixStatus": "candidate",
+      "baseline": {
+        "compilerVersion": "mock clang 6.0.0",
+        "outcome": "reported-symptom"
+      },
+      "trunk": {
+        "compilerVersion": "mock clang trunk (rev 123abcd)",
+        "outcome": "expected-behavior"
+      }
+    },
+    {
+      "id": 203,
+      "title": "Sema assertion during overload resolution",
+      "url": "https://llvm.example.invalid/issues/203",
+      "moduleIds": [
+        "clang-sema"
+      ],
+      "source": "generated-by-fuzzer",
+      "kind": "crash",
+      "originalReportAt": "2024-07-05T12:00:00Z",
+      "originalReportTracker": "github",
+      "lastHumanCommentAt": "2026-11-15T08:00:00Z",
+      "githubSyncedAt": "2026-11-27T08:00:00Z",
+      "lastVerifiedAt": "2026-11-26T08:00:00Z",
+      "conclusion": "still-reproducible",
+      "fixStatus": "unknown",
+      "baseline": {
+        "compilerVersion": "mock clang 6.0.0",
+        "outcome": "reported-symptom"
+      },
+      "trunk": {
+        "compilerVersion": "mock clang trunk (rev 123abcd)",
+        "outcome": "reported-symptom"
+      }
+    },
+    {
+      "id": 204,
+      "title": "Incorrect diagnostic with an unspecified language mode",
+      "url": "https://llvm.example.invalid/issues/204",
+      "moduleIds": [
+        "clang-sema"
+      ],
+      "source": "human-reported",
+      "kind": "diagnostic",
+      "originalReportAt": "2015-05-02T08:00:00Z",
+      "originalReportTracker": "bugzilla",
+      "lastHumanCommentAt": null,
+      "githubSyncedAt": "2026-11-27T08:00:00Z",
+      "lastVerifiedAt": null,
+      "conclusion": "insufficient-evidence",
+      "fixStatus": "unknown",
+      "baseline": null,
+      "trunk": null
+    },
+    {
+      "id": 205,
+      "title": "Report's diagnostic is absent on the stated baseline",
+      "url": "https://llvm.example.invalid/issues/205",
+      "moduleIds": [
+        "clang-sema"
+      ],
+      "source": "human-reported",
+      "kind": "diagnostic",
+      "originalReportAt": "2015-05-02T08:00:00Z",
+      "originalReportTracker": "bugzilla",
+      "lastHumanCommentAt": "2026-11-15T08:00:00Z",
+      "githubSyncedAt": "2026-11-27T08:00:00Z",
+      "lastVerifiedAt": "2026-11-26T08:00:00Z",
+      "conclusion": "insufficient-evidence",
+      "fixStatus": "unknown",
+      "baseline": {
+        "compilerVersion": "mock clang 6.0.0",
+        "outcome": "expected-behavior"
+      },
+      "trunk": {
+        "compilerVersion": "mock clang trunk (rev 123abcd)",
+        "outcome": "expected-behavior"
+      }
+    },
+    {
+      "id": 206,
+      "title": "Valid template assertion is rejected on a release build",
+      "url": "https://llvm.example.invalid/issues/206",
+      "moduleIds": [
+        "clang-sema"
+      ],
+      "source": "human-reported",
+      "kind": "diagnostic",
+      "originalReportAt": "2015-05-02T08:00:00Z",
+      "originalReportTracker": "bugzilla",
+      "lastHumanCommentAt": "2026-11-15T08:00:00Z",
+      "githubSyncedAt": "2026-11-27T08:00:00Z",
+      "lastVerifiedAt": "2026-11-26T08:00:00Z",
+      "conclusion": "close-candidate",
+      "fixStatus": "unknown",
+      "baseline": {
+        "compilerVersion": "mock clang 6.0.0",
+        "outcome": "reported-symptom"
+      },
+      "trunk": {
+        "compilerVersion": "mock clang trunk (rev 123abcd)",
+        "outcome": "expected-behavior"
+      }
+    }
+  ]
+}

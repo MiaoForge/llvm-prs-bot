@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llvm-prs-bot.invalid/schemas/v1/summary.schema.json",
+  "title": "Snapshot entry point",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "$ref": "common.schema.json#/$defs/schemaVersion"
+    },
+    "snapshotId": {
+      "$ref": "common.schema.json#/$defs/snapshotId"
+    },
+    "generatedAt": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "githubSyncedAt": {
+      "anyOf": [
+        { "$ref": "common.schema.json#/$defs/timestamp" },
+        { "type": "null" }
+      ]
+    },
+    "trunkCompilerVersion": {
+      "type": ["string", "null"],
+      "minLength": 1
+    },
+    "snapshotRoot": {
+      "type": "string",
+      "pattern": "^snapshots/[a-z0-9]+(?:[-_][a-z0-9]+)*/$"
+    },
+    "kpis": {
+      "$ref": "common.schema.json#/$defs/counts"
+    },
+    "modules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "common.schema.json#/$defs/moduleId"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "counts": {
+            "$ref": "common.schema.json#/$defs/counts"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "counts"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "snapshotId",
+    "generatedAt",
+    "githubSyncedAt",
+    "trunkCompilerVersion",
+    "snapshotRoot",
+    "kpis",
+    "modules"
+  ],
+  "additionalProperties": false
+}

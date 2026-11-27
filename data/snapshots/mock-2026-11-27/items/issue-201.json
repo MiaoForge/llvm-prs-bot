@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "snapshotId": "mock-2026-11-27",
+  "id": 201,
+  "title": "Valid variable template is rejected",
+  "url": "https://llvm.example.invalid/issues/201",
+  "moduleIds": [
+    "clang-sema"
+  ],
+  "source": "human-reported",
+  "kind": "diagnostic",
+  "originalReportAt": "2015-05-02T08:00:00Z",
+  "originalReportTracker": "bugzilla",
+  "lastHumanCommentAt": "2026-11-15T08:00:00Z",
+  "githubSyncedAt": "2026-11-27T08:00:00Z",
+  "lastVerifiedAt": "2026-11-26T08:00:00Z",
+  "conclusion": "close-candidate",
+  "fixStatus": "confirmed",
+  "baseline": {
+    "compilerVersion": "mock clang 6.0.0",
+    "outcome": "reported-symptom"
+  },
+  "trunk": {
+    "compilerVersion": "mock clang trunk (rev 123abcd)",
+    "outcome": "expected-behavior"
+  },
+  "repro": {
+    "sourceCode": "template<class T> constexpr int value = 1;\nstatic_assert(value<int> == 1);\n",
+    "compileArgs": [
+      "-std=c++17",
+      "-fsyntax-only"
+    ],
+    "expectedBehavior": "The compiler accepts the program.",
+    "sourceUrl": "https://llvm.example.invalid/issues/201#mock-report"
+  },
+  "runs": {
+    "baseline": {
+      "compilerId": "mock-clang-6",
+      "compilerVersion": "mock clang 6.0.0",
+      "outcome": "reported-symptom",
+      "exitCode": 1,
+      "diagnostics": "example.cpp:2:23: error: mock template diagnostic\nstatic_assert(value<int> == 1);\n              ~~~~~~~~~~ ^  ~\n1 error generated.\n",
+      "godboltUrl": "https://godbolt.example.invalid/z/201-baseline"
+    },
+    "trunk": {
+      "compilerId": "mock-clang-trunk",
+      "compilerVersion": "mock clang trunk (rev 123abcd)",
+      "outcome": "expected-behavior",
+      "exitCode": 0,
+      "diagnostics": "",
+      "godboltUrl": "https://godbolt.example.invalid/z/201-trunk"
+    }
+  },
+  "fixAttribution": {
+    "status": "confirmed",
+    "commitSha": "1111111111111111111111111111111111111111",
+    "reason": "Fixture records the test failing immediately before this commit and passing after it.",
+    "evidenceUrls": [
+      "https://llvm.example.invalid/commit/1111111111111111111111111111111111111111"
+    ]
+  },
+  "crashSignature": null,
+  "missingEvidence": []
+}

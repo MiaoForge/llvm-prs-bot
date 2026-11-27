@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "snapshotId": "mock-2026-11-27",
+  "id": 102,
+  "title": "[Clang][Sema] Handle a dependent type diagnostic",
+  "url": "https://llvm.example.invalid/pull/102",
+  "moduleIds": [
+    "clang-sema"
+  ],
+  "author": "mock-author",
+  "createdAt": "2026-11-19T08:00:00Z",
+  "lastHumanActivityAt": "2026-11-24T08:00:00Z",
+  "lastBotActivityAt": "2026-11-25T08:00:00Z",
+  "queues": [
+    "awaiting-rereview"
+  ],
+  "priority": 70,
+  "reason": "The author updated the PR after a request for changes. The required Clang check failed.",
+  "headSha": "cccccccccccccccccccccccccccccccccccccccc",
+  "headReview": {
+    "status": "review-required",
+    "commitSha": "cccccccccccccccccccccccccccccccccccccccc"
+  },
+  "headCi": {
+    "status": "failing",
+    "commitSha": "cccccccccccccccccccccccccccccccccccccccc"
+  },
+  "latestApproval": null,
+  "commitsSinceApproval": null,
+  "mergeability": "unknown",
+  "unresolvedDiscussionCount": 1,
+  "mergeHelpRequested": false,
+  "reasonEvidenceUrls": [
+    "https://llvm.example.invalid/pull/102#mock-review",
+    "https://llvm.example.invalid/pull/102#mock-commit"
+  ],
+  "requestedReviewers": [],
+  "suggestedReviewers": [],
+  "timeline": [
+    {
+      "at": "2026-11-20T08:00:00Z",
+      "kind": "review",
+      "actor": "mock-contributor",
+      "isBot": false,
+      "description": "Requested changes.",
+      "url": "https://llvm.example.invalid/pull/102#mock-review",
+      "commitSha": "dddddddddddddddddddddddddddddddddddddddd"
+    },
+    {
+      "at": "2026-11-24T08:00:00Z",
+      "kind": "commit",
+      "actor": "mock-contributor",
+      "isBot": false,
+      "description": "Pushed a revision.",
+      "url": "https://llvm.example.invalid/pull/102#mock-commit",
+      "commitSha": "cccccccccccccccccccccccccccccccccccccccc"
+    },
+    {
+      "at": "2026-11-25T08:00:00Z",
+      "kind": "check",
+      "actor": "mock-ci",
+      "isBot": true,
+      "description": "Clang tests: failing.",
+      "url": "https://llvm.example.invalid/pull/102#mock-check",
+      "commitSha": "cccccccccccccccccccccccccccccccccccccccc"
+    }
+  ],
+  "touchedPaths": [
+    "clang/lib/Sema/SemaTemplate.cpp"
+  ],
+  "requiredChecks": [
+    {
+      "name": "clang tests",
+      "status": "failing",
+      "commitSha": "cccccccccccccccccccccccccccccccccccccccc",
+      "url": "https://llvm.example.invalid/pull/102/checks"
+    }
+  ],
+  "unresolvedDiscussionUrls": [
+    "https://llvm.example.invalid/pull/102#mock-thread"
+  ]
+}

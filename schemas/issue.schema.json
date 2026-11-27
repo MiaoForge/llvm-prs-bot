@@ -1,0 +1,272 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://llvm-prs-bot.invalid/schemas/v1/issue.schema.json",
+  "title": "Issue verification detail",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "$ref": "common.schema.json#/$defs/schemaVersion"
+    },
+    "snapshotId": {
+      "$ref": "common.schema.json#/$defs/snapshotId"
+    },
+    "repro": {
+      "type": "object",
+      "properties": {
+        "sourceCode": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "compileArgs": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "expectedBehavior": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sourceUrl": {
+          "anyOf": [
+            {
+              "$ref": "common.schema.json#/$defs/evidenceUrl"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "sourceCode",
+        "compileArgs",
+        "expectedBehavior",
+        "sourceUrl"
+      ],
+      "additionalProperties": false
+    },
+    "runs": {
+      "type": "object",
+      "properties": {
+        "baseline": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "compilerId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "compilerVersion": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "exitCode": {
+                  "type": "integer"
+                },
+                "diagnostics": {
+                  "type": "string"
+                },
+                "outcome": {
+                  "$ref": "common.schema.json#/$defs/comparisonOutcome"
+                },
+                "godboltUrl": {
+                  "anyOf": [
+                    {
+                      "$ref": "common.schema.json#/$defs/evidenceUrl"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "compilerId",
+                "compilerVersion",
+                "exitCode",
+                "diagnostics",
+                "outcome",
+                "godboltUrl"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "trunk": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "compilerId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "compilerVersion": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "exitCode": {
+                  "type": "integer"
+                },
+                "diagnostics": {
+                  "type": "string"
+                },
+                "outcome": {
+                  "$ref": "common.schema.json#/$defs/comparisonOutcome"
+                },
+                "godboltUrl": {
+                  "anyOf": [
+                    {
+                      "$ref": "common.schema.json#/$defs/evidenceUrl"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "compilerId",
+                "compilerVersion",
+                "exitCode",
+                "diagnostics",
+                "outcome",
+                "godboltUrl"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "baseline",
+        "trunk"
+      ],
+      "additionalProperties": false
+    },
+    "fixAttribution": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "status": {
+              "const": "unknown"
+            }
+          },
+          "required": [
+            "status"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "candidate",
+                "confirmed"
+              ]
+            },
+            "commitSha": {
+              "$ref": "common.schema.json#/$defs/commitSha"
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1
+            },
+            "evidenceUrls": {
+              "type": "array",
+              "items": {
+                "$ref": "common.schema.json#/$defs/evidenceUrl"
+              },
+              "uniqueItems": true,
+              "minItems": 1
+            }
+          },
+          "required": [
+            "status",
+            "commitSha",
+            "reason",
+            "evidenceUrls"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "crashSignature": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "missingEvidence": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "source-code",
+          "compile-arguments",
+          "expected-behavior",
+          "baseline-version",
+          "baseline-run",
+          "baseline-symptom",
+          "trunk-run",
+          "trunk-outcome",
+          "crash-signature",
+          "other"
+        ]
+      },
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "snapshotId",
+    "repro",
+    "runs",
+    "fixAttribution",
+    "crashSignature",
+    "missingEvidence"
+  ],
+  "allOf": [
+    {
+      "$ref": "common.schema.json#/$defs/issueListFields"
+    }
+  ],
+  "unevaluatedProperties": false
+}

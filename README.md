@@ -14,3 +14,17 @@ verification evidence. The initial module is Clang / Sema.
 Use one independently reviewable change per commit. Write an imperative title
 in the form `[component] Concise summary` and explain why the change is needed
 and how it was tested in the commit body.
+
+## Validate the mock snapshot
+
+From the repository root, with Node.js and npm installed:
+
+```sh
+npm ci --prefix pipeline
+npm --prefix pipeline run validate
+npm --prefix pipeline test
+```
+
+Pass a different data directory to `node pipeline/validate-snapshot.mjs`
+to validate another snapshot. The [V1 contract guide](schemas/README.md)
+describes the shard layout and evidence semantics.

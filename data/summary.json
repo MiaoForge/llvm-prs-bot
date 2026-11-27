@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "snapshotId": "mock-2026-11-27",
+  "generatedAt": "2026-11-27T08:00:00Z",
+  "githubSyncedAt": "2026-11-27T08:00:00Z",
+  "trunkCompilerVersion": "mock clang trunk (rev 123abcd)",
+  "snapshotRoot": "snapshots/mock-2026-11-27/",
+  "kpis": {
+    "prTotal": 4,
+    "issueTotal": 6,
+    "prQueues": {
+      "approved-follow-up": 2,
+      "awaiting-rereview": 1,
+      "awaiting-first-review": 1,
+      "long-inactive": 1
+    },
+    "issueConclusions": {
+      "close-candidate": 3,
+      "still-reproducible": 1,
+      "insufficient-evidence": 2
+    },
+    "generatedByFuzzer": 2
+  },
+  "modules": [
+    {
+      "id": "clang-sema",
+      "name": "Clang / Sema",
+      "counts": {
+        "prTotal": 4,
+        "issueTotal": 6,
+        "prQueues": {
+          "approved-follow-up": 2,
+          "awaiting-rereview": 1,
+          "awaiting-first-review": 1,
+          "long-inactive": 1
+        },
+        "issueConclusions": {
+          "close-candidate": 3,
+          "still-reproducible": 1,
+          "insufficient-evidence": 2
+        },
+        "generatedByFuzzer": 2
+      }
+    },
+    {
+      "id": "clang-ast",
+      "name": "Clang / AST",
+      "counts": {
+        "prTotal": 1,
+        "issueTotal": 1,
+        "prQueues": {
+          "approved-follow-up": 1,
+          "awaiting-rereview": 0,
+          "awaiting-first-review": 0,
+          "long-inactive": 1
+        },
+        "issueConclusions": {
+          "close-candidate": 1,
+          "still-reproducible": 0,
+          "insufficient-evidence": 0
+        },
+        "generatedByFuzzer": 1
+      }
+    }
+  ]
+}

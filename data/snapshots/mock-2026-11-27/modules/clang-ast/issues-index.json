@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "snapshotId": "mock-2026-11-27",
+  "moduleId": "clang-ast",
+  "items": [
+    {
+      "id": 202,
+      "title": "Sema assertion when checking a dependent call",
+      "url": "https://llvm.example.invalid/issues/202",
+      "moduleIds": [
+        "clang-sema",
+        "clang-ast"
+      ],
+      "source": "generated-by-fuzzer",
+      "kind": "crash",
+      "originalReportAt": "2024-07-05T12:00:00Z",
+      "originalReportTracker": "github",
+      "lastHumanCommentAt": "2026-11-15T08:00:00Z",
+      "githubSyncedAt": "2026-11-27T08:00:00Z",
+      "lastVerifiedAt": "2026-11-26T08:00:00Z",
+      "conclusion": "close-candidate",
+      "fixStatus": "candidate",
+      "baseline": {
+        "compilerVersion": "mock clang 6.0.0",
+        "outcome": "reported-symptom"
+      },
+      "trunk": {
+        "compilerVersion": "mock clang trunk (rev 123abcd)",
+        "outcome": "expected-behavior"
+      }
+    }
+  ]
+}

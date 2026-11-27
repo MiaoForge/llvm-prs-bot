@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "snapshotId": "mock-2026-11-27",
+  "id": 202,
+  "title": "Sema assertion when checking a dependent call",
+  "url": "https://llvm.example.invalid/issues/202",
+  "moduleIds": [
+    "clang-sema",
+    "clang-ast"
+  ],
+  "source": "generated-by-fuzzer",
+  "kind": "crash",
+  "originalReportAt": "2024-07-05T12:00:00Z",
+  "originalReportTracker": "github",
+  "lastHumanCommentAt": "2026-11-15T08:00:00Z",
+  "githubSyncedAt": "2026-11-27T08:00:00Z",
+  "lastVerifiedAt": "2026-11-26T08:00:00Z",
+  "conclusion": "close-candidate",
+  "fixStatus": "candidate",
+  "baseline": {
+    "compilerVersion": "mock clang 6.0.0",
+    "outcome": "reported-symptom"
+  },
+  "trunk": {
+    "compilerVersion": "mock clang trunk (rev 123abcd)",
+    "outcome": "expected-behavior"
+  },
+  "repro": {
+    "sourceCode": "template<class T> constexpr bool accepts(T) { return true; }\nstatic_assert(accepts(0));\n",
+    "compileArgs": [
+      "-std=c++17",
+      "-fsyntax-only"
+    ],
+    "expectedBehavior": "The compiler finishes without crashing.",
+    "sourceUrl": "https://llvm.example.invalid/issues/202#mock-report"
+  },
+  "runs": {
+    "baseline": {
+      "compilerId": "mock-clang-6",
+      "compilerVersion": "mock clang 6.0.0",
+      "outcome": "reported-symptom",
+      "exitCode": 134,
+      "diagnostics": "clang: mock Sema assertion failed\ncompiler exited with signal SIGABRT\n",
+      "godboltUrl": "https://godbolt.example.invalid/z/202-baseline"
+    },
+    "trunk": {
+      "compilerId": "mock-clang-trunk",
+      "compilerVersion": "mock clang trunk (rev 123abcd)",
+      "outcome": "expected-behavior",
+      "exitCode": 0,
+      "diagnostics": "",
+      "godboltUrl": "https://godbolt.example.invalid/z/202-trunk"
+    }
+  },
+  "fixAttribution": {
+    "status": "candidate",
+    "commitSha": "2222222222222222222222222222222222222222",
+    "reason": "A related change mentions this assertion. Attribution is pending.",
+    "evidenceUrls": [
+      "https://llvm.example.invalid/commit/2222222222222222222222222222222222222222"
+    ]
+  },
+  "crashSignature": "mock Sema assertion failed",
+  "missingEvidence": []
+}

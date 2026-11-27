@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "snapshotId": "mock-2026-11-27",
+  "moduleId": "clang-ast",
+  "items": [
+    {
+      "id": 101,
+      "title": "[Clang][Sema] Preserve template substitution context",
+      "url": "https://llvm.example.invalid/pull/101",
+      "moduleIds": [
+        "clang-sema",
+        "clang-ast"
+      ],
+      "author": "mock-author",
+      "createdAt": "2025-12-01T08:00:00Z",
+      "lastHumanActivityAt": "2026-04-08T08:00:00Z",
+      "lastBotActivityAt": "2026-11-25T08:00:00Z",
+      "queues": [
+        "approved-follow-up",
+        "long-inactive"
+      ],
+      "priority": 100,
+      "reason": "Two commits landed after approval. The current head passes CI and awaits human review.",
+      "headSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "headReview": {
+        "status": "unknown",
+        "commitSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "headCi": {
+        "status": "passing",
+        "commitSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "latestApproval": {
+        "commitSha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "approvedAt": "2026-04-04T08:00:00Z"
+      },
+      "commitsSinceApproval": 2,
+      "mergeability": "mergeable",
+      "unresolvedDiscussionCount": 0,
+      "mergeHelpRequested": false
+    }
+  ]
+}

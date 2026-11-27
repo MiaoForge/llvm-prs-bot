@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "snapshotId": "mock-2026-11-27",
+  "id": 203,
+  "title": "Sema assertion during overload resolution",
+  "url": "https://llvm.example.invalid/issues/203",
+  "moduleIds": [
+    "clang-sema"
+  ],
+  "source": "generated-by-fuzzer",
+  "kind": "crash",
+  "originalReportAt": "2024-07-05T12:00:00Z",
+  "originalReportTracker": "github",
+  "lastHumanCommentAt": "2026-11-15T08:00:00Z",
+  "githubSyncedAt": "2026-11-27T08:00:00Z",
+  "lastVerifiedAt": "2026-11-26T08:00:00Z",
+  "conclusion": "still-reproducible",
+  "fixStatus": "unknown",
+  "baseline": {
+    "compilerVersion": "mock clang 6.0.0",
+    "outcome": "reported-symptom"
+  },
+  "trunk": {
+    "compilerVersion": "mock clang trunk (rev 123abcd)",
+    "outcome": "reported-symptom"
+  },
+  "repro": {
+    "sourceCode": "template<class T> constexpr bool accepts(T) { return true; }\nstatic_assert(accepts(0));\n",
+    "compileArgs": [
+      "-std=c++17",
+      "-fsyntax-only"
+    ],
+    "expectedBehavior": "The compiler finishes without crashing.",
+    "sourceUrl": "https://llvm.example.invalid/issues/203#mock-report"
+  },
+  "runs": {
+    "baseline": {
+      "compilerId": "mock-clang-6",
+      "compilerVersion": "mock clang 6.0.0",
+      "outcome": "reported-symptom",
+      "exitCode": 134,
+      "diagnostics": "clang: mock Sema assertion failed\ncompiler exited with signal SIGABRT\n",
+      "godboltUrl": "https://godbolt.example.invalid/z/203-baseline"
+    },
+    "trunk": {
+      "compilerId": "mock-clang-trunk",
+      "compilerVersion": "mock clang trunk (rev 123abcd)",
+      "outcome": "reported-symptom",
+      "exitCode": 134,
+      "diagnostics": "clang: mock Sema assertion failed\ncompiler exited with signal SIGABRT\n",
+      "godboltUrl": "https://godbolt.example.invalid/z/203-trunk"
+    }
+  },
+  "fixAttribution": {
+    "status": "unknown"
+  },
+  "crashSignature": "mock Sema assertion failed",
+  "missingEvidence": []
+}
