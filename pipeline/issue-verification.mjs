@@ -112,12 +112,15 @@ export function matchRun(run, { reported = {}, expected = {} } = {}) {
     run.diagnostics.includes(reported.diagnosticIncludes) &&
     (reported.exitCode === undefined || run.exitCode === reported.exitCode)
   const hasExpectedCheck =
-    Number.isInteger(expected.exitCode) || Boolean(expected.diagnosticIncludes)
+    Number.isInteger(expected.exitCode) ||
+    Boolean(expected.diagnosticIncludes) ||
+    expected.noCrash === true
   const expectedMatches =
     hasExpectedCheck &&
     (expected.exitCode === undefined || run.exitCode === expected.exitCode) &&
     (!expected.diagnosticIncludes || run.diagnostics.includes(expected.diagnosticIncludes)) &&
     (!expected.diagnosticExcludes || !run.diagnostics.includes(expected.diagnosticExcludes)) &&
+    (!expected.noCrash || [0, 1].includes(run.exitCode)) &&
     run.exitCode >= 0 &&
     run.exitCode < 128 &&
     extractCrashSignature(run.diagnostics) === null

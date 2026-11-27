@@ -17,7 +17,7 @@
   "conclusion": "close-candidate",
   "fixStatus": "unknown",
   "baseline": {
-    "compilerVersion": "mock clang 6.0.0",
+    "compilerVersion": "mock clang 22.1.0",
     "outcome": "reported-symptom"
   },
   "trunk": {
@@ -35,8 +35,8 @@
   },
   "runs": {
     "baseline": {
-      "compilerId": "mock-clang-6",
-      "compilerVersion": "mock clang 6.0.0",
+      "compilerId": "mock-clang-22",
+      "compilerVersion": "mock clang 22.1.0",
       "outcome": "reported-symptom",
       "exitCode": 1,
       "diagnostics": "example.cpp:2:23: error: mock template diagnostic\nstatic_assert(value<int> == 1);\n              ~~~~~~~~~~ ^  ~\n1 error generated.\n",

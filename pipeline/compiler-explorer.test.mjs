@@ -72,7 +72,10 @@ test('fetches observed compiler versions and sends lossless compile-only argumen
       '/api/compiler/new-clang/compile',
     ],
   )
-  assert.equal(requests[0].url.searchParams.get('fields'), 'id,fullVersion,version')
+  assert.equal(
+    requests[0].url.searchParams.get('fields'),
+    'id,name,fullVersion,version,semver,releaseTrack,compilerType',
+  )
   assert.equal(requests[1].request.headers.Accept, 'application/json')
   const body = JSON.parse(requests[1].request.body)
   assert.equal(body.source, repro.sourceCode)

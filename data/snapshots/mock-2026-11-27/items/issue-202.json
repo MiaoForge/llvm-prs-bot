@@ -18,7 +18,7 @@
   "conclusion": "close-candidate",
   "fixStatus": "candidate",
   "baseline": {
-    "compilerVersion": "mock clang 6.0.0",
+    "compilerVersion": "mock clang 22.1.0",
     "outcome": "reported-symptom"
   },
   "trunk": {
@@ -36,8 +36,8 @@
   },
   "runs": {
     "baseline": {
-      "compilerId": "mock-clang-6",
-      "compilerVersion": "mock clang 6.0.0",
+      "compilerId": "mock-clang-22",
+      "compilerVersion": "mock clang 22.1.0",
       "outcome": "reported-symptom",
       "exitCode": 134,
       "diagnostics": "clang: mock Sema assertion failed\ncompiler exited with signal SIGABRT\n",

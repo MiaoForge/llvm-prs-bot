@@ -94,7 +94,13 @@ export function createGitHubCollector(options = {}) {
         redirect: 'error',
         signal: controller.signal,
       })
-      if (!response.ok) throw new GitHubHttpError(response.status, path)
+      if (!response.ok) {
+        const error = new GitHubHttpError(response.status, path)
+        error.rateLimited =
+          response.headers.get('x-ratelimit-remaining') === '0' ||
+          response.headers.has('retry-after')
+        throw error
+      }
       return { data: await response.json(), more: nextPage(response) }
     }
     try {
@@ -108,7 +114,12 @@ export function createGitHubCollector(options = {}) {
     try {
       return await operation()
     } catch (error) {
-      if (!(error instanceof GitHubHttpError) || !unavailable.includes(error.status)) throw error
+      if (
+        !(error instanceof GitHubHttpError) ||
+        error.rateLimited ||
+        !unavailable.includes(error.status)
+      )
+        throw error
       return null
     }
   }
@@ -160,7 +171,7 @@ export function createGitHubCollector(options = {}) {
     const rules = await optional(() => pages(`${root}/rules/branches/${encoded}`), [403, 404])
     const legacy = await optional(
       () => request(`${root}/branches/${encoded}/protection/required_status_checks`),
-      [403, 404],
+      [401, 403, 404],
     )
     const required = (rules?.items ?? []).flatMap((rule) =>
       rule.type === 'required_status_checks' ? rule.parameters.required_status_checks : [],

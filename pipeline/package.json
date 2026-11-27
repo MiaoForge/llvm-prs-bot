@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "build:snapshot": "node build-snapshot.mjs",
+    "sync": "node sync-snapshot.mjs",
     "validate": "node validate-snapshot.mjs",
     "test": "node --test"
   },

@@ -20,7 +20,7 @@
       "conclusion": "close-candidate",
       "fixStatus": "confirmed",
       "baseline": {
-        "compilerVersion": "mock clang 6.0.0",
+        "compilerVersion": "mock clang 22.1.0",
         "outcome": "reported-symptom"
       },
       "trunk": {
@@ -46,7 +46,7 @@
       "conclusion": "close-candidate",
       "fixStatus": "candidate",
       "baseline": {
-        "compilerVersion": "mock clang 6.0.0",
+        "compilerVersion": "mock clang 22.1.0",
         "outcome": "reported-symptom"
       },
       "trunk": {
@@ -71,7 +71,7 @@
       "conclusion": "still-reproducible",
       "fixStatus": "unknown",
       "baseline": {
-        "compilerVersion": "mock clang 6.0.0",
+        "compilerVersion": "mock clang 22.1.0",
         "outcome": "reported-symptom"
       },
       "trunk": {
@@ -115,7 +115,7 @@
       "conclusion": "insufficient-evidence",
       "fixStatus": "unknown",
       "baseline": {
-        "compilerVersion": "mock clang 6.0.0",
+        "compilerVersion": "mock clang 22.1.0",
         "outcome": "expected-behavior"
       },
       "trunk": {
@@ -140,7 +140,7 @@
       "conclusion": "close-candidate",
       "fixStatus": "unknown",
       "baseline": {
-        "compilerVersion": "mock clang 6.0.0",
+        "compilerVersion": "mock clang 22.1.0",
         "outcome": "reported-symptom"
       },
       "trunk": {

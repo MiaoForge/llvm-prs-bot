@@ -74,7 +74,7 @@ export function createCompilerExplorerClient({
 
   function compilerCatalog(language) {
     if (!catalogs.has(language)) {
-      const path = `api/compilers/${encodeURIComponent(language)}?fields=id,fullVersion,version`
+      const path = `api/compilers/${encodeURIComponent(language)}?fields=id,name,fullVersion,version,semver,releaseTrack,compilerType`
       catalogs.set(
         language,
         request(path)
@@ -88,7 +88,15 @@ export function createCompilerExplorerClient({
                 'Compiler Explorer response has no valid compiler catalog',
               )
             }
-            return new Map(compilers.map((entry) => [entry.id, entry.fullVersion || entry.version]))
+            return new Map(
+              compilers.map((entry) => [
+                entry.id,
+                {
+                  ...entry,
+                  version: entry.fullVersion || entry.version,
+                },
+              ]),
+            )
           })
           .catch((error) => {
             catalogs.delete(language)
@@ -100,6 +108,9 @@ export function createCompilerExplorerClient({
   }
 
   return {
+    async listCompilers(language = 'c++') {
+      return [...(await compilerCatalog(language)).values()].map((entry) => ({ ...entry }))
+    },
     async compile({ compilerId, sourceCode, compileArgs, language = 'c++', godboltUrl = null }) {
       if (
         typeof compilerId !== 'string' ||
@@ -112,7 +123,7 @@ export function createCompilerExplorerClient({
         throw new TypeError('Compile requires a compiler ID, source, and compiler argument tokens')
       }
       const catalog = await compilerCatalog(language)
-      const compilerVersion = catalog.get(compilerId)
+      const compilerVersion = catalog.get(compilerId)?.version
       if (typeof compilerVersion !== 'string' || compilerVersion.length === 0) {
         throw new CompilerExplorerError(
           'compiler-unavailable',

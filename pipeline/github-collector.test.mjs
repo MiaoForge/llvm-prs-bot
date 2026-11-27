@@ -34,6 +34,7 @@ test('extracts a single source, argument tokens and explicitly stated behavior',
   assert.equal(extractReproducer('clang x.cpp && clang y.cpp').repro.compileArgs, null)
   assert.equal(extractReproducer('clang x.cpp y.cpp').repro.compileArgs, null)
   assert.equal(extractReproducer('Clang 20 and Clang 21').declaredVersion, null)
+  assert.equal(extractReproducer('Clang 20 and Clang 21').versionAmbiguous, true)
   assert.equal(extractReproducer('```cpp\nint x;\n```\n```cpp\nint y;\n```').repro.sourceCode, null)
   assert.deepEqual(extractReproducer('clang x.c').repro.compileArgs, [])
 })

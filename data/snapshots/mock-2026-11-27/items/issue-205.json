@@ -17,7 +17,7 @@
   "conclusion": "insufficient-evidence",
   "fixStatus": "unknown",
   "baseline": {
-    "compilerVersion": "mock clang 6.0.0",
+    "compilerVersion": "mock clang 22.1.0",
     "outcome": "expected-behavior"
   },
   "trunk": {
@@ -35,8 +35,8 @@
   },
   "runs": {
     "baseline": {
-      "compilerId": "mock-clang-6",
-      "compilerVersion": "mock clang 6.0.0",
+      "compilerId": "mock-clang-22",
+      "compilerVersion": "mock clang 22.1.0",
       "outcome": "expected-behavior",
       "exitCode": 0,
       "diagnostics": "",

@@ -320,7 +320,7 @@ describe('static workbench', () => {
     expect(writeText.mock.calls[1][0]).toBe(
       [
         'I rechecked the reproducer from this issue with the following compilers:',
-        '- Baseline: mock clang 6.0.0 (exit 1) reproduced the reported symptom. [Compiler Explorer](https://godbolt.example.invalid/z/201-baseline)',
+        '- Baseline: mock clang 22.1.0 (exit 1) reproduced the reported symptom. [Compiler Explorer](https://godbolt.example.invalid/z/201-baseline)',
         '- Trunk: mock clang trunk (rev 123abcd) (exit 0) met the expected behavior. [Compiler Explorer](https://godbolt.example.invalid/z/201-trunk)',
         '',
         'Expected behavior: The compiler accepts the program.',

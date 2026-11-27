@@ -70,14 +70,13 @@ export function supportsCompileArgs(args) {
   )
 }
 
-function declaredVersion(text) {
+function declaredVersions(text) {
   const versions = [
     ...text.matchAll(/\bclang(?:\+\+)?(?:[ \t]+version)?[ \t-]+(\d{1,2}(?:\.\d+){0,2})\b/gi),
   ].map((match) => match[1])
   const table = /^\|?\s*Version\s*\|\s*(\d{1,2}(?:\.\d+){0,2})(?:\s*\||\s*$)/im.exec(text)
   if (table) versions.push(table[1])
-  const unique = [...new Set(versions)]
-  return unique.length === 1 ? unique[0] : null
+  return [...new Set(versions)]
 }
 
 export function extractReproducer(body = '', title = '') {
@@ -93,7 +92,7 @@ export function extractReproducer(body = '', title = '') {
   const distinctArgs = new Map(invocations.map((args) => [JSON.stringify(args), args]))
   const compileArgs = distinctArgs.size === 1 ? distinctArgs.values().next().value : null
   const expectedBehavior =
-    /^(?:#{1,6}\s*)?Expected(?:\s+(?:behavior|output|result))?\s*:\s*(\S[^\n]*)/im
+    /^(?:#{1,6}[ \t]*)?Expected(?:[ \t]+(?:behavior|output|result))?[ \t]*:[ \t]*(?:\n[ \t]*){0,2}([^#\s`~][^\n]*)/im
       .exec(prose)?.[1]
       ?.trim() ?? null
   const crashSignature = extractCrashSignature(prose) ?? extractCrashSignature(title)
@@ -114,10 +113,17 @@ export function extractReproducer(body = '', title = '') {
       ? 0
       : undefined
   const expectedDiagnostic = /\berror:\s*(\S.*)/i.exec(expectedBehavior ?? '')?.[1]?.trim()
+  const versions = declaredVersions(prose)
+  const expectsNoCrash =
+    kind === 'crash' &&
+    /\b(?:no crash|without crashing|should not crash|safe termination)\b/i.test(
+      expectedBehavior ?? '',
+    )
   return {
     kind,
     language: source ? languages.get(source[2].toLowerCase()) : null,
-    declaredVersion: declaredVersion(prose),
+    declaredVersion: versions.length === 1 ? versions[0] : null,
+    versionAmbiguous: versions.length > 1,
     reportedCrashSignature: crashSignature,
     repro: { sourceCode: source?.[3]?.trim() ? source[3] : null, compileArgs, expectedBehavior },
     expectations: {
@@ -126,7 +132,9 @@ export function extractReproducer(body = '', title = '') {
         ? { diagnosticIncludes: expectedDiagnostic }
         : expectedExit === 0
           ? { exitCode: 0 }
-          : {},
+          : expectsNoCrash
+            ? { noCrash: true }
+            : {},
     },
   }
 }

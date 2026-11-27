@@ -21,7 +21,7 @@
       "conclusion": "close-candidate",
       "fixStatus": "candidate",
       "baseline": {
-        "compilerVersion": "mock clang 6.0.0",
+        "compilerVersion": "mock clang 22.1.0",
         "outcome": "reported-symptom"
       },
       "trunk": {

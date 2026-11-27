@@ -1,8 +1,58 @@
 # Triage pipeline
 
-The pipeline consumes normalized records. Producers retain responsibility for
-fetching upstream data and marking coverage. Rules operate on passed-in
-observations and timestamps and can be tested without network access.
+## Sync from LLVM GitHub
+
+Use Node.js 24. Live synchronization defaults to `llvm/llvm-project` and
+the `clang:frontend`, `clang:sema` and `clang:ast` labels. Label matches are
+combined across searches. Each run refreshes a bounded, recently updated
+window of open PRs and issues and samples recently merged PRs for reviewer
+evidence. This window is not a full inventory of LLVM's backlog.
+
+```sh
+npm ci --prefix pipeline
+npm --prefix pipeline run sync
+node pipeline/sync-snapshot.mjs --output /path/to/data --state /path/to/triage-state.json
+node pipeline/sync-snapshot.mjs --dry-run
+```
+
+The default output is `data/`. Dry runs query upstream and the compiler
+catalog but skip compilation and leave both the snapshot and state untouched.
+Keep the optional state file outside the published data directory. It stores
+the last synchronization time and cached comparisons for the observed window.
+The next run reuses comparisons with unchanged issue inputs and compiler
+versions. If either changes, it queues a recheck and shows insufficient
+evidence until a fresh comparison is available. Least recently attempted
+issues are tried first. Without a state file, no past results are assumed
+and the same per-run budget applies.
+
+| Environment variable | Default |
+| --- | --- |
+| `UPSTREAM_GITHUB_REPOSITORY` | `llvm/llvm-project` |
+| `GITHUB_MODULE_LABELS` | `clang:frontend,clang:sema,clang:ast` |
+| `GITHUB_TOKEN` | Optional token with read access |
+| `GITHUB_MAX_PAGES` / `GITHUB_MAX_PRS` / `GITHUB_MAX_ISSUES` / `GITHUB_MAX_HISTORY` | 3 / 12 / 24 / 6 |
+| `GITHUB_REQUEST_BUDGET` / `GITHUB_TIMEOUT_MS` | 400 / 15,000 |
+| `MAX_REVERIFY_PER_RUN` | 4 issue comparisons |
+| `COMPILER_EXPLORER_REQUEST_BUDGET` / `COMPILER_EXPLORER_TIMEOUT_MS` | Two catalog requests plus two requests per allowed issue / 15,000 |
+| `CLANG_BASELINE_ID` / `CLANG_TRUNK_ID` | Latest stable Clang 22 / `clang_trunk` |
+
+An explicitly reported Clang version takes precedence over the default.
+Major-only declarations can match the latest stable release of that major.
+A specific release requires a matching catalog entry. The sample data uses
+synthetic Clang 22.1.0 observations.
+
+The collector preserves the GitHub creation timestamp for migrated Bugzilla
+issues unless the report supplies an explicit original date. A pull request
+whose head or update timestamp changes during collection is left for the next
+run. Unavailable protection metadata leaves CI coverage unknown. The
+reproducer extractor accepts an unambiguous C or C++ Markdown source block,
+one single-file compile invocation or a flags line, and explicitly stated
+behavior. Other inputs remain visible with evidence gaps. Only supported
+portable compile options are submitted to Compiler Explorer.
+
+The rules consume normalized records. The collector marks upstream coverage
+before applying them. Rules operate on passed-in observations and timestamps
+and can be tested without network access.
 
 ## PR observations
 
