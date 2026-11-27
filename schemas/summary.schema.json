@@ -14,10 +14,7 @@
       "$ref": "common.schema.json#/$defs/timestamp"
     },
     "githubSyncedAt": {
-      "anyOf": [
-        { "$ref": "common.schema.json#/$defs/timestamp" },
-        { "type": "null" }
-      ]
+      "anyOf": [{ "$ref": "common.schema.json#/$defs/timestamp" }, { "type": "null" }]
     },
     "trunkCompilerVersion": {
       "type": ["string", "null"],
@@ -46,11 +43,7 @@
             "$ref": "common.schema.json#/$defs/counts"
           }
         },
-        "required": [
-          "id",
-          "name",
-          "counts"
-        ],
+        "required": ["id", "name", "counts"],
         "additionalProperties": false
       }
     }

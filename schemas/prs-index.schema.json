@@ -22,11 +22,6 @@
       }
     }
   },
-  "required": [
-    "schemaVersion",
-    "snapshotId",
-    "moduleId",
-    "items"
-  ],
+  "required": ["schemaVersion", "snapshotId", "moduleId", "items"],
   "additionalProperties": false
 }

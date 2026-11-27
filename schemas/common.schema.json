@@ -34,54 +34,27 @@
     },
     "prQueue": {
       "type": "string",
-      "enum": [
-        "approved-follow-up",
-        "awaiting-rereview",
-        "awaiting-first-review",
-        "long-inactive"
-      ]
+      "enum": ["approved-follow-up", "awaiting-rereview", "awaiting-first-review", "long-inactive"]
     },
     "issueConclusion": {
       "type": "string",
-      "enum": [
-        "close-candidate",
-        "still-reproducible",
-        "insufficient-evidence"
-      ]
+      "enum": ["close-candidate", "still-reproducible", "insufficient-evidence"]
     },
     "issueSource": {
       "type": "string",
-      "enum": [
-        "human-reported",
-        "generated-by-fuzzer",
-        "unknown"
-      ]
+      "enum": ["human-reported", "generated-by-fuzzer", "unknown"]
     },
     "issueKind": {
       "type": "string",
-      "enum": [
-        "diagnostic",
-        "crash",
-        "other",
-        "unknown"
-      ]
+      "enum": ["diagnostic", "crash", "other", "unknown"]
     },
     "fixStatus": {
       "type": "string",
-      "enum": [
-        "unknown",
-        "candidate",
-        "confirmed"
-      ]
+      "enum": ["unknown", "candidate", "confirmed"]
     },
     "comparisonOutcome": {
       "type": "string",
-      "enum": [
-        "reported-symptom",
-        "expected-behavior",
-        "different-behavior",
-        "unknown"
-      ]
+      "enum": ["reported-symptom", "expected-behavior", "different-behavior", "unknown"]
     },
     "counts": {
       "type": "object",
@@ -138,11 +111,7 @@
               "minimum": 0
             }
           },
-          "required": [
-            "close-candidate",
-            "still-reproducible",
-            "insufficient-evidence"
-          ],
+          "required": ["close-candidate", "still-reproducible", "insufficient-evidence"],
           "additionalProperties": false
         },
         "generatedByFuzzer": {
@@ -150,13 +119,7 @@
           "minimum": 0
         }
       },
-      "required": [
-        "prTotal",
-        "issueTotal",
-        "prQueues",
-        "issueConclusions",
-        "generatedByFuzzer"
-      ],
+      "required": ["prTotal", "issueTotal", "prQueues", "issueConclusions", "generatedByFuzzer"],
       "additionalProperties": false
     },
     "prListFields": {
@@ -230,21 +193,13 @@
           "properties": {
             "status": {
               "type": "string",
-              "enum": [
-                "approved",
-                "changes-requested",
-                "review-required",
-                "unknown"
-              ]
+              "enum": ["approved", "changes-requested", "review-required", "unknown"]
             },
             "commitSha": {
               "$ref": "common.schema.json#/$defs/commitSha"
             }
           },
-          "required": [
-            "status",
-            "commitSha"
-          ],
+          "required": ["status", "commitSha"],
           "additionalProperties": false
         },
         "headCi": {
@@ -252,21 +207,13 @@
           "properties": {
             "status": {
               "type": "string",
-              "enum": [
-                "passing",
-                "failing",
-                "pending",
-                "unknown"
-              ]
+              "enum": ["passing", "failing", "pending", "unknown"]
             },
             "commitSha": {
               "$ref": "common.schema.json#/$defs/commitSha"
             }
           },
-          "required": [
-            "status",
-            "commitSha"
-          ],
+          "required": ["status", "commitSha"],
           "additionalProperties": false
         },
         "latestApproval": {
@@ -281,10 +228,7 @@
                   "$ref": "common.schema.json#/$defs/timestamp"
                 }
               },
-              "required": [
-                "commitSha",
-                "approvedAt"
-              ],
+              "required": ["commitSha", "approvedAt"],
               "additionalProperties": false
             },
             {
@@ -306,11 +250,7 @@
         },
         "mergeability": {
           "type": "string",
-          "enum": [
-            "mergeable",
-            "conflicting",
-            "unknown"
-          ]
+          "enum": ["mergeable", "conflicting", "unknown"]
         },
         "unresolvedDiscussionCount": {
           "anyOf": [
@@ -381,11 +321,7 @@
         },
         "originalReportTracker": {
           "type": "string",
-          "enum": [
-            "github",
-            "bugzilla",
-            "unknown"
-          ]
+          "enum": ["github", "bugzilla", "unknown"]
         },
         "lastHumanCommentAt": {
           "anyOf": [
@@ -429,10 +365,7 @@
                   "$ref": "common.schema.json#/$defs/comparisonOutcome"
                 }
               },
-              "required": [
-                "compilerVersion",
-                "outcome"
-              ],
+              "required": ["compilerVersion", "outcome"],
               "additionalProperties": false
             },
             {
@@ -453,10 +386,7 @@
                   "$ref": "common.schema.json#/$defs/comparisonOutcome"
                 }
               },
-              "required": [
-                "compilerVersion",
-                "outcome"
-              ],
+              "required": ["compilerVersion", "outcome"],
               "additionalProperties": false
             },
             {

@@ -28,27 +28,14 @@
           },
           "kind": {
             "type": "string",
-            "enum": [
-              "user",
-              "team"
-            ]
+            "enum": ["user", "team"]
           },
           "response": {
             "type": "string",
-            "enum": [
-              "pending",
-              "commented",
-              "approved",
-              "changes-requested",
-              "unknown"
-            ]
+            "enum": ["pending", "commented", "approved", "changes-requested", "unknown"]
           }
         },
-        "required": [
-          "login",
-          "kind",
-          "response"
-        ],
+        "required": ["login", "kind", "response"],
         "additionalProperties": false
       }
     },
@@ -74,11 +61,7 @@
             "minItems": 1
           }
         },
-        "required": [
-          "login",
-          "reason",
-          "evidenceUrls"
-        ],
+        "required": ["login", "reason", "evidenceUrls"],
         "additionalProperties": false
       }
     },
@@ -92,15 +75,7 @@
           },
           "kind": {
             "type": "string",
-            "enum": [
-              "commit",
-              "review",
-              "review-request",
-              "comment",
-              "check",
-              "label",
-              "other"
-            ]
+            "enum": ["commit", "review", "review-request", "comment", "check", "label", "other"]
           },
           "actor": {
             "type": "string",
@@ -127,15 +102,7 @@
             ]
           }
         },
-        "required": [
-          "at",
-          "kind",
-          "actor",
-          "isBot",
-          "description",
-          "url",
-          "commitSha"
-        ],
+        "required": ["at", "kind", "actor", "isBot", "description", "url", "commitSha"],
         "additionalProperties": false
       }
     },
@@ -158,12 +125,7 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "passing",
-              "failing",
-              "pending",
-              "unknown"
-            ]
+            "enum": ["passing", "failing", "pending", "unknown"]
           },
           "commitSha": {
             "$ref": "common.schema.json#/$defs/commitSha"
@@ -179,12 +141,7 @@
             ]
           }
         },
-        "required": [
-          "name",
-          "status",
-          "commitSha",
-          "url"
-        ],
+        "required": ["name", "status", "commitSha", "url"],
         "additionalProperties": false
       }
     },

@@ -5,6 +5,7 @@
 /pipeline/**/*.tsx text eol=lf
 /pipeline/**/*.css text eol=lf
 /pipeline/**/*.json text eol=lf
+/schemas/**/*.schema.json text eol=lf
 /web/**/*.mjs text eol=lf
 /web/**/*.ts text eol=lf
 /web/**/*.tsx text eol=lf

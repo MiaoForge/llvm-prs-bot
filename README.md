@@ -26,7 +26,8 @@ npm run lint          # Check static rules and treat warnings as failures
 ```
 
 These commands check JavaScript, TypeScript, CSS, and JSON source in
-`pipeline/` and `web/`. They skip dependencies, lockfiles, the web build,
+`pipeline/` and `web/`, plus the hand-written JSON schemas in `schemas/`.
+They skip dependencies, lockfiles, the web build,
 and schema-generated TypeScript. CI runs both checks on pushes and pull
 requests.
 

@@ -5,6 +5,7 @@
       "biome.json",
       "package.json",
       "pipeline/**/*.{mjs,ts,tsx,css,json}",
+      "schemas/**/*.schema.json",
       "web/**/*.{mjs,ts,tsx,css,json}",
       "!!**/node_modules",
       "!!web/dist",
