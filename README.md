@@ -55,8 +55,23 @@ runs pipeline and web tests, typechecks the web app, and checks a project-site
 build with the repository as its URL base path.
 
 Enable **GitHub Actions** as the Pages source in the repository settings to
-deploy. Run the Pages workflow manually from the default branch and provide the
-`snapshot_id` from `data/summary.json`. It validates that ID and the complete
-snapshot both before and after the Pages build. The current checked-in
-snapshot is a demo. A future production workflow can build `data/` from
-collected upstream inputs before these checks.
+deploy. The Pages workflow syncs LLVM's live data from the default branch at
+03:17 UTC daily. Manual dispatch offers `live` to run the sync and `snapshot`
+to publish a checked-in snapshot after supplying its `snapshot_id`. Both
+modes validate the selected snapshot before and after building the site.
+A failed live sync stops the deployment.
+
+The workflow uses the repository's read-only GitHub token by default. To use
+a dedicated upstream token, configure the optional `LLVM_UPSTREAM_TOKEN`
+Actions secret. Set collection limits and recheck budgets with the Actions
+variables listed in the [pipeline guide](pipeline/README.md). In Actions
+settings, prefix the collector's `GITHUB_*` configuration variables with
+`TRIAGE_`, for example `TRIAGE_GITHUB_MAX_PRS`. The workflow maps these
+names to the local environment variables.
+
+Live builds persist verification state through the GitHub Actions cache on
+the default branch. Cache eviction or an unavailable cache starts the next
+run with empty state and the same verification budget. The cache contains
+public verification evidence and cursors. Each deploy includes the current
+live snapshot and any checked-in shards. The workbench can reload the latest
+index if a previous live shard has expired.

@@ -1,11 +1,19 @@
 name: GitHub Pages
 
 on:
+  schedule:
+    - cron: '17 3 * * *'
   workflow_dispatch:
     inputs:
+      mode:
+        description: Generate a live snapshot or publish the checked-in snapshot
+        type: choice
+        default: live
+        options:
+          - live
+          - snapshot
       snapshot_id:
-        description: Snapshot ID in the checked-in data/summary.json
-        required: true
+        description: Checked-in data/summary.json ID (required in snapshot mode)
         type: string
 
 permissions:
@@ -19,11 +27,13 @@ jobs:
   build:
     if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
       pages: read
     env:
-      EXPECTED_SNAPSHOT_ID: ${{ inputs.snapshot_id }}
+      SYNC_MODE: ${{ inputs.mode || 'live' }}
+      SELECTED_SNAPSHOT_ID: ${{ inputs.snapshot_id }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -38,9 +48,48 @@ jobs:
       - uses: actions/configure-pages@v5
         id: pages
       - run: npm ci --prefix pipeline
-      # A production workflow can generate data/ from collected inputs here.
-      # Manual dispatch currently publishes a selected checked-in snapshot.
+      - name: Restore verification state
+        if: env.SYNC_MODE == 'live'
+        uses: actions/cache/restore@v5
+        continue-on-error: true
+        with:
+          path: ${{ runner.temp }}/triage-state.json
+          key: triage-state-v1-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: triage-state-v1-
+      - name: Select or generate snapshot
+        id: snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.LLVM_UPSTREAM_TOKEN || github.token }}
+          UPSTREAM_GITHUB_REPOSITORY: ${{ vars.UPSTREAM_GITHUB_REPOSITORY }}
+          GITHUB_MODULE_LABELS: ${{ vars.TRIAGE_GITHUB_MODULE_LABELS }}
+          GITHUB_MAX_PAGES: ${{ vars.TRIAGE_GITHUB_MAX_PAGES }}
+          GITHUB_MAX_PRS: ${{ vars.TRIAGE_GITHUB_MAX_PRS }}
+          GITHUB_MAX_ISSUES: ${{ vars.TRIAGE_GITHUB_MAX_ISSUES }}
+          GITHUB_MAX_HISTORY: ${{ vars.TRIAGE_GITHUB_MAX_HISTORY }}
+          GITHUB_REQUEST_BUDGET: ${{ vars.TRIAGE_GITHUB_REQUEST_BUDGET }}
+          GITHUB_TIMEOUT_MS: ${{ vars.TRIAGE_GITHUB_TIMEOUT_MS }}
+          MAX_REVERIFY_PER_RUN: ${{ vars.MAX_REVERIFY_PER_RUN }}
+          COMPILER_EXPLORER_REQUEST_BUDGET: ${{ vars.COMPILER_EXPLORER_REQUEST_BUDGET }}
+          COMPILER_EXPLORER_TIMEOUT_MS: ${{ vars.COMPILER_EXPLORER_TIMEOUT_MS }}
+          CLANG_BASELINE_ID: ${{ vars.CLANG_BASELINE_ID }}
+          CLANG_TRUNK_ID: ${{ vars.CLANG_TRUNK_ID }}
+        shell: bash
+        run: |
+          if [[ "$SYNC_MODE" == live ]]; then
+            snapshot_id="live-$(date -u +%F)-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+            node pipeline/sync-snapshot.mjs --output data --snapshot-id "$snapshot_id" \
+              --state "$RUNNER_TEMP/triage-state.json"
+          else
+            snapshot_id="$SELECTED_SNAPSHOT_ID"
+          fi
+          if [[ ! "$snapshot_id" =~ ^[a-z0-9]+([-_][a-z0-9]+)*$ ]]; then
+            echo "A valid snapshot ID is required"
+            exit 1
+          fi
+          printf 'id=%s\n' "$snapshot_id" >> "$GITHUB_OUTPUT"
       - name: Validate selected snapshot
+        env:
+          EXPECTED_SNAPSHOT_ID: ${{ steps.snapshot.outputs.id }}
         run: node pipeline/validate-snapshot.mjs data "$EXPECTED_SNAPSHOT_ID"
       - run: npm ci --prefix web
       - name: Build workbench
@@ -48,7 +97,16 @@ jobs:
         env:
           VITE_BASE_PATH: ${{ format('{0}/', steps.pages.outputs.base_path) }}
       - name: Verify packaged snapshot
+        env:
+          EXPECTED_SNAPSHOT_ID: ${{ steps.snapshot.outputs.id }}
         run: node pipeline/validate-snapshot.mjs web/dist/data "$EXPECTED_SNAPSHOT_ID"
+      - name: Save verification state
+        if: env.SYNC_MODE == 'live'
+        uses: actions/cache/save@v5
+        continue-on-error: true
+        with:
+          path: ${{ runner.temp }}/triage-state.json
+          key: triage-state-v1-${{ github.run_id }}-${{ github.run_attempt }}
       - uses: actions/upload-pages-artifact@v4
         with:
           path: web/dist
