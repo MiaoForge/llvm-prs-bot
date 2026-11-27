@@ -17,7 +17,7 @@ and how it was tested in the commit body.
 
 ## Validate the mock snapshot
 
-From the repository root, with Node.js and npm installed:
+From the repository root, with Node.js 24 and npm installed:
 
 ```sh
 npm ci --prefix pipeline
@@ -28,3 +28,19 @@ npm --prefix pipeline test
 Pass a different data directory to `node pipeline/validate-snapshot.mjs`
 to validate another snapshot. The [V1 contract guide](schemas/README.md)
 describes the shard layout and evidence semantics.
+
+## Pipeline and deployment
+
+The [pipeline guide](pipeline/README.md) shows how to derive triage results
+from normalized observations and publish a validated static snapshot.
+
+CI runs on pushes and pull requests. It validates the committed snapshot,
+runs pipeline and web tests, typechecks the web app, and checks a project-site
+build with the repository as its URL base path.
+
+Enable **GitHub Actions** as the Pages source in the repository settings to
+deploy. The Pages workflow builds from the default branch at 03:17 UTC daily
+and on manual dispatch. It validates the checked-in snapshot and builds with
+the configured Pages base path before uploading `web/dist`. The committed
+snapshot is currently synthetic. Supplying and committing a newer snapshot is
+a separate pipeline operation.
