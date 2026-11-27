@@ -306,13 +306,19 @@ test('keeps human activity unknown for a newer HEAD without an observed push', (
       },
     ],
   }
-  const pr = triagePr(normalizePull(pull, observations), { now: '2026-11-27T00:00:00Z' })
-  assert.equal(pr.lastHumanActivityAt, null)
-  assert.ok(!pr.queues.includes('long-inactive'))
-  assert.deepEqual(
-    pr.timeline.map(({ at, commitSha, url }) => ({ at, commitSha, url })),
-    [{ at: committedAt, commitSha: head, url: commitUrl }],
-  )
+  for (const committer of [human, bot]) {
+    const normalized = normalizePull(pull, {
+      ...observations,
+      commits: [{ ...observations.commits[0], committer }],
+    })
+    const pr = triagePr(normalized, { now: '2026-11-27T00:00:00Z' })
+    assert.equal(pr.lastHumanActivityAt, null, committer.login)
+    assert.ok(!pr.queues.includes('long-inactive'), committer.login)
+    assert.deepEqual(
+      pr.timeline.map(({ at, commitSha, url }) => ({ at, commitSha, url })),
+      [{ at: committedAt, commitSha: head, url: commitUrl }],
+    )
+  }
 
   const botOnly = triagePr(
     normalizePull(pull, {

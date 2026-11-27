@@ -106,11 +106,10 @@ export function triagePr(
   const human = activityEvents.filter((event) => !event.isBot)
   const lastHuman = human.at(-1)
   const lastKnownHumanActivityAt = lastHuman?.at ?? (pr.authorIsBot === false ? createdAt : null)
-  // A newer human commit does not date the push, but it makes the old activity date uncertain.
+  // Commit metadata identifies neither the pusher nor the push time.
   const unattributedUpdate =
     !headPush &&
     headCommit &&
-    !headCommit.isBot &&
     lastKnownHumanActivityAt !== null &&
     Date.parse(headCommit.at) > Date.parse(lastKnownHumanActivityAt)
   const activityComplete = [
