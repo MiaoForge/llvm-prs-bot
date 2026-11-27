@@ -14,6 +14,7 @@ import {
   humanize,
   LoadError,
   Loading,
+  ModuleEvidence,
   ModuleTags,
   SelectFilter,
   useRowNavigation,
@@ -256,7 +257,7 @@ function IssueInspector({
   if (detail.isPending) return <Loading>Loading issue #{id}…</Loading>
   if (detail.error)
     return <LoadError error={detail.error} reload={reload} retry={detail.refetch} busy={busy} />
-  return <IssueEvidence issue={detail.data} />
+  return <IssueEvidence issue={detail.data} modules={summary.modules} />
 }
 
 export function closeComment(issue: IssueDetail) {
@@ -273,10 +274,23 @@ export function closeComment(issue: IssueDetail) {
   return parts.join('\n')
 }
 
-function IssueEvidence({ issue }: { issue: IssueDetail }) {
+function IssueEvidence({
+  issue,
+  modules,
+}: {
+  issue: IssueDetail
+  modules: WorkbenchProps['summary']['modules']
+}) {
   const verdict = verdicts[issue.conclusion]
   const { baseline, trunk } = issue.runs
-  const { sourceCode, compileArgs, expectedBehavior, sourceUrl } = issue.repro
+  const {
+    sourceCode,
+    compileArgs,
+    expectedBehavior,
+    sourceUrl,
+    reporterGodboltUrls = [],
+  } = issue.repro
+  const notYetVerified = baseline === null && trunk === null && issue.lastVerifiedAt === null
   const comment = closeComment(issue)
   const godbolt = trunk?.godboltUrl ?? baseline?.godboltUrl
   return (
@@ -335,7 +349,11 @@ function IssueEvidence({ issue }: { issue: IssueDetail }) {
       <div className="matrix-2 issue-verdict-grid">
         <section className={`callout ${verdict.tone}`}>
           <h3 className="callout-h">Verification Result</h3>
-          <p className="callout-p">{verdict.explanation}</p>
+          <p className="callout-p">
+            {notYetVerified
+              ? 'Not yet verified. No compiler runs have been recorded yet.'
+              : verdict.explanation}
+          </p>
         </section>
         <section className="callout mut">
           <h3 className="callout-h">Fix Attribution · {humanize(issue.fixAttribution.status)}</h3>
@@ -350,6 +368,7 @@ function IssueEvidence({ issue }: { issue: IssueDetail }) {
           )}
         </section>
       </div>
+      <ModuleEvidence evidence={issue.moduleEvidence} modules={modules} />
       {issue.missingEvidence.length > 0 && (
         <section className="callout mut">
           <h3 className="callout-h">Missing Evidence Checklist</h3>
@@ -365,6 +384,12 @@ function IssueEvidence({ issue }: { issue: IssueDetail }) {
           <h3>Extracted Reproducer</h3>
           <div className="inline-facts">
             {sourceUrl && <EvidenceLink url={sourceUrl}>Source report</EvidenceLink>}
+            {reporterGodboltUrls.map((url, index) => (
+              <EvidenceLink key={url} url={url}>
+                Reporter’s Compiler Explorer link
+                {reporterGodboltUrls.length > 1 ? ` ${index + 1}` : ''}
+              </EvidenceLink>
+            ))}
             {sourceCode !== null && <CopyButton text={sourceCode}>Copy source</CopyButton>}
           </div>
         </div>

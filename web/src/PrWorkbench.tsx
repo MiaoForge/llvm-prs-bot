@@ -13,6 +13,7 @@ import {
   day,
   LoadError,
   Loading,
+  ModuleEvidence,
   ModuleTags,
   SelectFilter,
   useRowNavigation,
@@ -189,16 +190,39 @@ function PrInspector({
   if (detail.isPending) return <Loading>Loading pull request #{id}…</Loading>
   if (detail.error)
     return <LoadError error={detail.error} reload={reload} retry={detail.refetch} busy={busy} />
-  return <PrEvidence pr={detail.data} />
+  return <PrEvidence pr={detail.data} modules={summary.modules} />
 }
 
-function PrEvidence({ pr }: { pr: PrDetail }) {
+function observedCheckSummary(checks: PrDetail['requiredChecks']) {
+  const counts = { passing: 0, failing: 0, pending: 0, unknown: 0 }
+  for (const { status } of checks) counts[status]++
+  return [
+    counts.passing && `${counts.passing} passed`,
+    counts.failing && `${counts.failing} failed`,
+    counts.pending && `${counts.pending} pending`,
+    counts.unknown && `${counts.unknown} unknown`,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+}
+
+function PrEvidence({ pr, modules }: { pr: PrDetail; modules: Summary['modules'] }) {
   const { params, update } = useFilters()
   const humanOnly = params.get('bots') !== '1'
   const events = pr.timeline
     .filter((event) => !humanOnly || !event.isBot)
     .sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
   const sha = (value: string) => <code title={value}>{value.slice(0, 12)}</code>
+  const ciContext =
+    pr.headCi.status === 'unknown' && pr.requiredChecks.length > 0 ? (
+      <>
+        {sha(pr.headCi.commitSha)}
+        <span className="block">Observed checks: {observedCheckSummary(pr.requiredChecks)}</span>
+        <span className="block">Required-check coverage unknown</span>
+      </>
+    ) : (
+      sha(pr.headCi.commitSha)
+    )
   const priorApproval = pr.latestApproval
     ? pr.commitsSinceApproval === null
       ? 'Commit distance unknown'
@@ -208,7 +232,7 @@ function PrEvidence({ pr }: { pr: PrDetail }) {
     : 'No recorded approval'
   const facts = [
     ['Review at HEAD', humanize(pr.headReview.status), sha(pr.headReview.commitSha)],
-    ['CI at HEAD', humanize(pr.headCi.status), sha(pr.headCi.commitSha)],
+    ['CI at HEAD', humanize(pr.headCi.status), ciContext],
     ['Mergeability', humanize(pr.mergeability), null],
     ['Unresolved discussions', pr.unresolvedDiscussionCount ?? 'Unknown', null],
   ] as const
@@ -287,6 +311,7 @@ function PrEvidence({ pr }: { pr: PrDetail }) {
           )}
         </div>
       </section>
+      <ModuleEvidence evidence={pr.moduleEvidence} modules={modules} />
       <section>
         <div className="sec-h">
           <h3>Timeline</h3>

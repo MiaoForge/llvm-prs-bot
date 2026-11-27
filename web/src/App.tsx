@@ -24,7 +24,7 @@ import {
   type Summary,
 } from './snapshot'
 import { issueQueues, prQueues, searchMatch, useFilters, workbenchLink } from './state'
-import { LoadError, Loading, utc } from './ui'
+import { compactCompilerVersion, LoadError, Loading, utc } from './ui'
 import { PrWorkbench } from './PrWorkbench'
 import { IssueWorkbench } from './IssueWorkbench'
 import { Overview } from './Overview'
@@ -212,7 +212,9 @@ function Workbench({ queryClient }: { queryClient: QueryClient }) {
             <div className="sb-foot-row mt-2">
               <span>Clang Trunk</span>
             </div>
-            <code>{summary.trunkCompilerVersion ?? 'Unknown'}</code>
+            <code title={summary.trunkCompilerVersion ?? undefined}>
+              {compactCompilerVersion(summary.trunkCompilerVersion)}
+            </code>
           </footer>
         )}
       </aside>

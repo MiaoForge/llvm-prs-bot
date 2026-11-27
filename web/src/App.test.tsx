@@ -9,7 +9,9 @@ import pr104 from '../../data/snapshots/mock-2026-11-27/items/pr-104.json'
 import issue201 from '../../data/snapshots/mock-2026-11-27/items/issue-201.json'
 import issue202 from '../../data/snapshots/mock-2026-11-27/items/issue-202.json'
 import issue204 from '../../data/snapshots/mock-2026-11-27/items/issue-204.json'
+import issue205 from '../../data/snapshots/mock-2026-11-27/items/issue-205.json'
 import { App, makeQueryClient } from './App'
+import { compactCompilerVersion } from './ui'
 
 const client = makeQueryClient()
 const dialogPrototype = HTMLDialogElement.prototype
@@ -45,6 +47,7 @@ function fixture(part: string) {
     'issue-201.json': issue201,
     'issue-202.json': issue202,
     'issue-204.json': issue204,
+    'issue-205.json': issue205,
   }
   return paths[part]
 }
@@ -335,12 +338,127 @@ describe('static workbench', () => {
   })
 
   it('shows recorded evidence gaps without offering a close comment', async () => {
-    mockFetch()
+    const reporterUrl = 'https://godbolt.example.invalid/z/reporter'
+    mockFetch((path) =>
+      path.endsWith('/issue-204.json')
+        ? json({
+            ...issue204,
+            moduleEvidence: [{ moduleId: 'clang-sema', matchedLabels: ['clang:sema'] }],
+            repro: { ...issue204.repro, reporterGodboltUrls: [reporterUrl] },
+          })
+        : undefined,
+    )
     open('#/issues?module=clang-sema&item=204')
     const detail = within(await screen.findByRole('region', { name: 'Issue details' }))
     expect(await detail.findByRole('heading', { name: 'Missing Evidence Checklist' })).toBeTruthy()
+    expect(detail.getByText('Insufficient evidence')).toBeTruthy()
+    expect(detail.getByText(/Not yet verified\. No compiler runs/)).toBeTruthy()
+    expect(detail.queryByText(/The recorded runs do not establish/)).toBeNull()
+    expect(
+      detail.getByRole('link', { name: 'Reporter’s Compiler Explorer link' }).getAttribute('href'),
+    ).toBe(reporterUrl)
+    expect(detail.queryByRole('link', { name: 'Open in Godbolt' })).toBeNull()
+    const evidence = within(detail.getByRole('region', { name: 'Module Evidence' }))
+    expect(evidence.getByText('Clang / Sema')).toBeTruthy()
+    expect(evidence.getByText('clang:sema')).toBeTruthy()
     expect(detail.getByRole('heading', { name: 'Fix Attribution · Unknown' })).toBeTruthy()
     expect(detail.queryByRole('button', { name: 'Copy Close Comment' })).toBeNull()
+  })
+
+  it('retains the inconclusive-run explanation and separates reporter and run links', async () => {
+    const reporterUrls = [
+      'https://godbolt.example.invalid/z/first',
+      'https://godbolt.example.invalid/z/second',
+    ]
+    mockFetch((path) =>
+      path.endsWith('/issue-205.json')
+        ? json({ ...issue205, repro: { ...issue205.repro, reporterGodboltUrls: reporterUrls } })
+        : undefined,
+    )
+    open('#/issues?module=clang-sema&item=205')
+    const detail = within(await screen.findByRole('region', { name: 'Issue details' }))
+    expect(await detail.findByText(/The recorded runs do not establish/)).toBeTruthy()
+    expect(detail.queryByText(/Not yet verified/)).toBeNull()
+    expect(
+      detail
+        .getAllByRole('link', { name: /Reporter’s Compiler Explorer link/ })
+        .map((link) => link.getAttribute('href')),
+    ).toEqual(reporterUrls)
+    expect(detail.getByRole('link', { name: 'Open in Godbolt' }).getAttribute('href')).toBe(
+      issue205.runs.trunk.godboltUrl,
+    )
+  })
+
+  it('shows observed check counts separately from unknown HEAD CI and names matched PR paths', async () => {
+    const headCi = { ...pr101.headCi, status: 'unknown' }
+    const statuses = ['passing', 'passing', 'failing', 'pending', 'unknown']
+    const matchedPath = 'clang/lib/Sema/SemaDecl.cpp'
+    mockFetch((path) => {
+      if (path.endsWith('/prs-index.json')) {
+        return json({
+          ...prIndex,
+          items: prIndex.items.map((pr) => (pr.id === 101 ? { ...pr, headCi } : pr)),
+        })
+      }
+      if (path.endsWith('/pr-101.json')) {
+        return json({
+          ...pr101,
+          headCi,
+          requiredChecks: statuses.map((status, index) => ({
+            name: `check-${index}`,
+            commitSha: pr101.headSha,
+            status,
+            url: null,
+          })),
+          moduleEvidence: [
+            { moduleId: 'clang-sema', matchedPaths: [matchedPath], matchedLabels: ['clang:sema'] },
+            { moduleId: 'clang-ast', matchedPaths: ['clang/lib/AST/ASTContext.cpp'] },
+          ],
+        })
+      }
+    })
+    open('#/prs?module=clang-sema&item=101')
+    const detail = within(await screen.findByRole('region', { name: 'Pull request details' }))
+    const ciFact = (await detail.findByText('CI at HEAD')).parentElement
+    if (ciFact === null) throw new Error('Missing CI fact container')
+    const ci = within(ciFact)
+    expect(ci.getByText('Unknown')).toBeTruthy()
+    expect(
+      ci.getByText('Observed checks: 2 passed · 1 failed · 1 pending · 1 unknown'),
+    ).toBeTruthy()
+    expect(ci.getByText('Required-check coverage unknown')).toBeTruthy()
+    const evidence = within(detail.getByRole('region', { name: 'Module Evidence' }))
+    expect(evidence.getByText('Clang / Sema')).toBeTruthy()
+    expect(evidence.getByText('Clang / AST')).toBeTruthy()
+    expect(evidence.getByText(matchedPath)).toBeTruthy()
+    expect(evidence.getByText('clang:sema')).toBeTruthy()
+  })
+
+  it('compacts the compiler version in the sidebar and overview while keeping the original title', async () => {
+    const version = [
+      'clang version 24.0.0git (https://github.com/llvm/llvm-project.git 34f5121a36150000000000000000000000000000)',
+      'Target: x86_64-unknown-linux-gnu',
+      'Thread model: posix',
+      'InstalledDir: /cefs/clang-trunk/bin',
+    ].join('\n')
+    mockFetch((path) =>
+      path.endsWith('/summary.json')
+        ? json({ ...summary, trunkCompilerVersion: version })
+        : undefined,
+    )
+    open('#/')
+    const versions = await screen.findAllByText('clang 24.0.0git · 34f5121a3615', {
+      selector: 'code',
+    })
+    expect(versions).toHaveLength(2)
+    for (const code of versions) expect(code.getAttribute('title')).toBe(version)
+  })
+
+  it('falls back to a bounded first line if the compiler version cannot be parsed', () => {
+    expect(compactCompilerVersion(null)).toBe('Unknown')
+    expect(compactCompilerVersion('clang version 22.1.0\r\nTarget: x86_64')).toBe('clang 22.1.0')
+    expect(compactCompilerVersion('Custom compiler\r\nLine two')).toBe('Custom compiler')
+    expect(compactCompilerVersion(`${'x'.repeat(50)}\r\nLine two`)).toBe(`${'x'.repeat(35)}…`)
   })
 
   it('labels bounded coverage and presents overview counts as sampled', async () => {

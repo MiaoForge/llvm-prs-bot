@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { ExternalLink, X } from 'lucide-react'
-import { isMissingSnapshotFile, type Summary } from './snapshot'
+import { isMissingSnapshotFile, type PrDetail, type Summary } from './snapshot'
 import { nextItem } from './state'
 
 export function humanize(value: string) {
@@ -13,6 +13,67 @@ export function utc(value: string | null) {
 
 export function day(value: string | null) {
   return value ? new Date(value).toISOString().slice(0, 10) : 'Unknown'
+}
+
+export function compactCompilerVersion(version: string | null) {
+  const firstLine = version?.trim().split(/\r?\n/, 1)[0].trim()
+  if (!firstLine) return 'Unknown'
+
+  const clang = firstLine.match(/\bclang version\s+(\d[\w.+-]*)/i)?.[1]
+  if (clang) {
+    const revision = firstLine.match(/\s([0-9a-f]{7,40})(?=\s*(?:\)|$))/i)?.[1]
+    return revision ? `clang ${clang} · ${revision.slice(0, 12)}` : `clang ${clang}`
+  }
+
+  return firstLine.length > 36 ? `${firstLine.slice(0, 35).trimEnd()}…` : firstLine
+}
+
+export function ModuleEvidence({
+  evidence,
+  modules,
+}: {
+  evidence: PrDetail['moduleEvidence']
+  modules: Summary['modules']
+}) {
+  if (!evidence?.length) return null
+  return (
+    <section aria-label="Module Evidence">
+      <h3 className="sec-h">Module Evidence</h3>
+      <dl className="grid gap-3 text-xs">
+        {evidence.map(({ moduleId, matchedPaths, matchedLabels }) => (
+          <div key={moduleId}>
+            <dt className="font-semibold">
+              {modules.find(({ id }) => id === moduleId)?.name ?? moduleId}
+            </dt>
+            {matchedPaths?.length ? (
+              <dd className="mt-1">
+                Matched paths
+                <ul className="list-disc pl-5">
+                  {matchedPaths.map((path) => (
+                    <li key={path}>
+                      <code className="break-all">{path}</code>
+                    </li>
+                  ))}
+                </ul>
+              </dd>
+            ) : null}
+            {matchedLabels?.length ? (
+              <dd className="mt-1">
+                Matched labels
+                <ul className="inline-facts mt-1">
+                  {matchedLabels.map((label) => (
+                    <li key={label}>
+                      <span className="mod-tag">{label}</span>
+                    </li>
+                  ))}
+                </ul>
+              </dd>
+            ) : null}
+          </div>
+        ))}
+      </dl>
+    </section>
+  )
 }
 
 export function EvidenceLink({

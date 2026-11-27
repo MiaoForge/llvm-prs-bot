@@ -3,7 +3,7 @@ import { ArrowUpRight } from 'lucide-react'
 import { Link } from 'react-router'
 import { issueIndexOptions, prIndexOptions } from './snapshot'
 import { filterIssues, filterPrs, issueQueues, prQueues, workbenchLink } from './state'
-import { LoadError, Loading, utc } from './ui'
+import { compactCompilerVersion, LoadError, Loading, utc } from './ui'
 import type { WorkbenchProps } from './PrWorkbench'
 
 const prDescriptions = [
@@ -58,7 +58,9 @@ export function Overview({ summary, moduleId, reload, busy }: WorkbenchProps) {
               {utc(summary.githubSyncedAt)}
             </time>
             <span aria-hidden="true"> · </span> Clang trunk{' '}
-            <code>{summary.trunkCompilerVersion ?? 'Unknown'}</code>
+            <code title={summary.trunkCompilerVersion ?? undefined}>
+              {compactCompilerVersion(summary.trunkCompilerVersion)}
+            </code>
           </p>
         </section>
         <section>
