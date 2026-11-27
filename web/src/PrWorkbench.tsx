@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Copy, GitPullRequest } from 'lucide-react'
 import { prIndexOptions, usePrDetail, type PrDetail, type Summary } from './snapshot'
 import { filterPrs, parseItem, prQueues, prSorts, useFilters } from './state'
-import { CopyButton, DetailClose, EmptyList, EvidenceLink, EvidenceLinks, humanize, day,
+import { CopyButton, DetailClose, EmptyList, EvidenceLink, EvidenceLinks, FilteredSelection, humanize, day,
   LoadError, Loading, ModuleTags, SelectFilter, useRowNavigation, utc } from './ui'
 
 export type WorkbenchProps = {
@@ -59,6 +59,8 @@ export function PrWorkbench({ summary, moduleId, reload, busy }: WorkbenchProps)
       </div>
       <section className="inspector item-detail" aria-label="Pull request details" ref={navigation.detail}>
         {selected !== null && <div className="detail-close"><DetailClose close={navigation.close} /></div>}
+        {selectedRow && !rows.some(item => item.id === selectedRow.id) && <FilteredSelection
+          clearFilters={() => update({ queue: null, ci: null, merge: null, inactive: null, q: null })} />}
         {selected !== null && index.isPending && <Loading>Loading pull requests…</Loading>}
         {selected === null && <div className="state-message"><GitPullRequest className="ic" /><p>Select a pull request to inspect its current HEAD and review history.</p></div>}
         {selected !== null && index.data && !selectedRow && <div className="state-message">

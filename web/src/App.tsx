@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-quer
 import { AlertCircle, CheckCircle2, Clock3, Eye, GitPullRequest, LayoutGrid,
   RefreshCw, Search, X, Zap, CircleHelp, type LucideIcon } from 'lucide-react'
 import { Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router'
-import { issueIndexOptions, prIndexOptions, SnapshotError, summaryOptions, type Counts, type Summary } from './snapshot'
+import { isMissingSnapshotFile, issueIndexOptions, prIndexOptions, summaryOptions, type Counts, type Summary } from './snapshot'
 import { issueQueues, prQueues, searchMatch, useFilters, workbenchLink } from './state'
 import { LoadError, Loading, utc } from './ui'
 import { PrWorkbench } from './PrWorkbench'
@@ -13,7 +13,7 @@ import { ThemePicker } from './theme'
 
 export function makeQueryClient() {
   return new QueryClient({ defaultOptions: { queries: {
-    retry: (count, error) => count < 1 && !(error instanceof SnapshotError && error.status === 404),
+    retry: (count, error) => count < 1 && !isMissingSnapshotFile(error),
   } } })
 }
 
@@ -137,10 +137,11 @@ function Workbench({ queryClient }: { queryClient: QueryClient }) {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>}
     </main>
-    {summary && module && searchOpen && <SearchDialog summary={summary} moduleId={module.id} close={() => {
-      setSearchOpen(false)
-      searchTrigger.current?.focus()
-    }} />}
+    {summary && module && searchOpen && <SearchDialog summary={summary} moduleId={module.id}
+      reload={reload} busy={summaryQuery.isFetching} summaryError={summaryQuery.error} close={() => {
+        setSearchOpen(false)
+        searchTrigger.current?.focus()
+      }} />}
   </div>
 }
 
@@ -156,19 +157,24 @@ function NavItem({ label, icon: Icon, href, count, tone = '', active }: {
   </Link>
 }
 
-function SearchDialog({ summary, moduleId, close }: { summary: Summary; moduleId: string; close: () => void }) {
+function SearchDialog({ summary, moduleId, close, reload, busy, summaryError }: {
+  summary: Summary; moduleId: string; close: () => void; reload: () => void; busy: boolean; summaryError: Error | null
+}) {
   const dialog = useRef<HTMLDialogElement>(null)
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const prs = useQuery(prIndexOptions(summary, moduleId))
   const issues = useQuery(issueIndexOptions(summary, moduleId))
+  const missingFile = [prs.error, issues.error].find(isMissingSnapshotFile)
+  const searchError = missingFile ?? prs.error ?? issues.error
+  const loading = prs.isPending || issues.isPending
   useEffect(() => { dialog.current?.showModal() }, [])
   const matches = query.trim() ? [
     ...(prs.data?.items ?? []).filter(item => searchMatch(item, query)).map(item => ({ ...item, view: 'prs' as const })),
     ...(issues.data?.items ?? []).filter(item => searchMatch(item, query)).map(item => ({ ...item, view: 'issues' as const })),
   ].slice(0, 12) : []
   const open = (item: typeof matches[number]) => {
-    navigate(workbenchLink(item.view, moduleId, { item: String(item.id), q: query.trim() }))
+    navigate(workbenchLink(item.view, moduleId, { item: String(item.id) }))
     close()
   }
   return <dialog className="search-dialog" ref={dialog} onCancel={event => { event.preventDefault(); close() }} aria-label="Search backlog">
@@ -177,9 +183,13 @@ function SearchDialog({ summary, moduleId, close }: { summary: Summary; moduleId
         value={query} onChange={event => setQuery(event.target.value)} />
       <button className="btn" type="button" aria-label="Close search" onClick={close}><X className="ic" /></button>
     </form>
-    {(prs.isPending || issues.isPending) && <p className="state-message">Loading the module index…</p>}
-    {(prs.isError || issues.isError) && <p className="state-message" role="alert">Some search results are unavailable.</p>}
-    {query.trim() && matches.length === 0 && !prs.isPending && !issues.isPending && <p className="state-message">No matching items in this module.</p>}
+    {loading && <p className="state-message">Loading the module index…</p>}
+    {summaryError ? <LoadError error={summaryError} retry={reload} busy={busy} />
+      : searchError && <LoadError error={searchError} reload={reload} busy={busy} retry={() => {
+        if (prs.isError) void prs.refetch()
+        if (issues.isError) void issues.refetch()
+      }} />}
+    {query.trim() && matches.length === 0 && !loading && !searchError && <p className="state-message">No matching items in this module.</p>}
     <ul>{matches.map(item => <li key={`${item.view}-${item.id}`}>
       <button className="sb-item" onClick={() => open(item)}>
         <span className="row-id">{item.view === 'prs' ? 'PR' : 'Issue'} #{item.id}</span>{item.title}

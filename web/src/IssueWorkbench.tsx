@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ArrowRight, Copy, FlaskConical, Zap } from 'lucide-react'
 import { issueIndexOptions, useIssueDetail, type IssueDetail, type IssueRow } from './snapshot'
 import { filterIssues, issueQueues, issueSorts, issueSources, parseItem, useFilters } from './state'
-import { CopyButton, DetailClose, EmptyList, EvidenceLink, EvidenceLinks, day, humanize,
+import { CopyButton, DetailClose, EmptyList, EvidenceLink, EvidenceLinks, FilteredSelection, day, humanize,
   LoadError, Loading, ModuleTags, SelectFilter, useRowNavigation, utc } from './ui'
 import type { WorkbenchProps } from './PrWorkbench'
 
@@ -68,7 +68,6 @@ export function IssueWorkbench({ summary, moduleId, reload, busy }: WorkbenchPro
     <div className={`split-issue ${selected !== null ? 'has-detail' : ''}`}>
       <div className="pane-list" aria-label="Issues" ref={navigation.list}>
         {index.isPending && <Loading>Loading issues…</Loading>}
-        {index.error && <LoadError error={index.error} reload={reload} retry={index.refetch} busy={busy} />}
         {index.data && rows.length === 0 && <EmptyList reset={reset} />}
         {rows.map(issue => <button key={issue.id} data-item={issue.id}
           aria-current={selected === issue.id ? 'true' : undefined} onClick={() => select(issue.id)}
@@ -88,6 +87,8 @@ export function IssueWorkbench({ summary, moduleId, reload, busy }: WorkbenchPro
       </div>
       <section className="issue-detail item-detail" aria-label="Issue details" ref={navigation.detail}>
         {selected !== null && <div className="detail-close"><DetailClose close={navigation.close} /></div>}
+        {selectedRow && !rows.some(item => item.id === selectedRow.id) && <FilteredSelection
+          clearFilters={() => update({ queue: null, source: null, age: null, fix: null, q: null })} />}
         {selected !== null && index.isPending && <Loading>Loading issues…</Loading>}
         {selected === null && <div className="state-message"><FlaskConical className="ic" /><p>Select an issue to compare its baseline and trunk runs.</p></div>}
         {selected !== null && index.data && !selectedRow && <div className="state-message">
@@ -160,7 +161,9 @@ function IssueEvidence({ issue }: { issue: IssueDetail }) {
       </div>
     </header>
     {issue.crashSignature && <section className={`callout ${verdict.tone}`}>
-      <h3 className="callout-h"><span className="inline-flex items-center gap-2"><Zap className="ic" />Fuzzer Crash Signature</span></h3>
+      <h3 className="callout-h">{issue.source === 'generated-by-fuzzer'
+        ? <span className="inline-flex items-center gap-2"><Zap className="ic" />Fuzzer Crash Signature</span>
+        : 'Crash Signature'}</h3>
       <pre className="diag crash-signature">{issue.crashSignature}</pre>
     </section>}
     <div className="matrix-2 issue-verdict-grid">
@@ -190,7 +193,9 @@ function IssueEvidence({ issue }: { issue: IssueDetail }) {
       <div className="compile-args">
         <strong>Compiler arguments</strong>
         {compileArgs === null ? 'Unknown' : compileArgs.length ? (
-          <ul className="inline-facts">{compileArgs.map((arg, index) => <li key={index}><code>{JSON.stringify(arg)}</code></li>)}</ul>
+          <ul className="inline-facts">{compileArgs.map((arg, index) => (
+            <li key={index}><code>{arg === '' || /\s/.test(arg) ? JSON.stringify(arg) : arg}</code></li>
+          ))}</ul>
         ) : 'None'}
       </div>
       {sourceCode === null ? <p className="state-message">No source code is available.</p> : (

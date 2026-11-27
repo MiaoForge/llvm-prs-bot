@@ -12,12 +12,18 @@ import issue204 from '../../data/snapshots/mock-2026-11-27/items/issue-204.json'
 import { App, makeQueryClient } from './App'
 
 const client = makeQueryClient()
+const dialogPrototype = HTMLDialogElement.prototype
+let restoreShowModal = false
 
 afterEach(() => {
   cleanup()
   client.clear()
   vi.unstubAllGlobals()
   Reflect.deleteProperty(navigator, 'clipboard')
+  if (restoreShowModal) {
+    Reflect.deleteProperty(dialogPrototype, 'showModal')
+    restoreShowModal = false
+  }
 })
 
 function open(hash: string) {
@@ -52,6 +58,21 @@ function mockFetch(override?: (path: string) => Promise<Response> | Response | u
   })
   vi.stubGlobal('fetch', fetcher)
   return fetcher
+}
+
+async function openSearch() {
+  // jsdom does not implement the native dialog opening method.
+  if (!dialogPrototype.showModal) {
+    Object.defineProperty(dialogPrototype, 'showModal', {
+      configurable: true,
+      value(this: HTMLDialogElement) { this.open = true },
+    })
+    restoreShowModal = true
+  }
+  const trigger = screen.getByRole<HTMLButtonElement>('button', { name: /Search backlog/ })
+  await waitFor(() => expect(trigger.disabled).toBe(false))
+  fireEvent.click(trigger)
+  return within(screen.getByRole('dialog', { name: 'Search backlog' }))
 }
 
 describe('static workbench', () => {
@@ -93,8 +114,9 @@ describe('static workbench', () => {
     expect(window.location.hash).toBe('#/prs?module=clang-sema')
   })
 
-  it('recovers a retired shard by reloading the summary and keeping the URL state', async () => {
+  it('recovers a retired shard and explains when the selected PR changes queues', async () => {
     const replacement = 'replacement-2026-11-27'
+    const moved = { ...pr101, snapshotId: replacement, queues: ['long-inactive'] }
     let count = 0
     const fetcher = mockFetch(path => {
       if (path.endsWith('/summary.json') && ++count > 1) return json({
@@ -102,11 +124,14 @@ describe('static workbench', () => {
       })
       if (path.includes(summary.snapshotRoot) && path.endsWith('/pr-101.json')) return new Response(null, { status: 404 })
       if (path.includes(replacement)) {
-        if (path.endsWith('/prs-index.json')) return json({ ...prIndex, snapshotId: replacement })
-        if (path.endsWith('/pr-101.json')) return json({ ...pr101, snapshotId: replacement })
+        if (path.endsWith('/prs-index.json')) return json({
+          ...prIndex, snapshotId: replacement,
+          items: prIndex.items.map(pr => pr.id === moved.id ? { ...pr, queues: moved.queues } : pr),
+        })
+        if (path.endsWith('/pr-101.json')) return json(moved)
       }
     })
-    const hash = '#/prs?module=clang-sema&queue=approved-follow-up&ci=passing&item=101'
+    const hash = '#/prs?module=clang-sema&queue=approved-follow-up&ci=passing&item=101&sort=oldest'
     open(hash)
     const detail = within(await screen.findByRole('region', { name: 'Pull request details' }))
     const button = await detail.findByRole('button', { name: 'Load latest snapshot' })
@@ -116,10 +141,108 @@ describe('static workbench', () => {
     expect(detail.getByText(/2 commits since approval/)).toBeTruthy()
     expect(within(detail.getByText('Review at HEAD').parentElement!).getByText('Unknown')).toBeTruthy()
     expect(window.location.hash).toBe(hash)
+    expect(detail.getByText(/does not match the current filters/)).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /#101/ })).toBeNull()
+    fireEvent.click(detail.getByRole('button', { name: 'Clear filters' }))
+    expect(window.location.hash).toBe('#/prs?module=clang-sema&item=101&sort=oldest')
+    expect(detail.queryByRole('button', { name: 'Clear filters' })).toBeNull()
+    expect(screen.getByRole('button', { name: /#101/ }).getAttribute('aria-current')).toBe('true')
     expect(fetcher.mock.calls.some(([url]) => url.endsWith(`snapshots/${replacement}/items/pr-101.json`))).toBe(true)
     expect(detail.queryByText(/@mock-ci/)).toBeNull()
     fireEvent.click(detail.getByRole('checkbox', { name: 'Human only' }))
     expect(detail.getByText('@mock-ci')).toBeTruthy()
+  })
+
+  it('distinguishes an issue excluded by filters from an issue outside the module', async () => {
+    mockFetch()
+    const result = open('#/issues?module=clang-sema&source=human-reported&item=202')
+    const detail = within(await screen.findByRole('region', { name: 'Issue details' }))
+    expect(await detail.findByRole('heading', { name: issue202.title })).toBeTruthy()
+    expect(detail.getByText(/does not match the current filters/)).toBeTruthy()
+    fireEvent.click(detail.getByRole('button', { name: 'Clear filters' }))
+    expect(window.location.hash).toBe('#/issues?module=clang-sema&item=202')
+
+    result.unmount()
+    open('#/issues?module=clang-sema&item=999')
+    expect(await screen.findByText(/Issue #999 is outside this module/)).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Clear filters' })).toBeNull()
+  })
+
+  it('recovers a missing search index alongside a cached one without clearing the search term', async () => {
+    const replacement = 'replacement-2026-11-27'
+    let count = 0
+    const fetcher = mockFetch(path => {
+      if (path.endsWith('/summary.json') && ++count > 1) return json({
+        ...summary, snapshotId: replacement, snapshotRoot: `snapshots/${replacement}/`,
+      })
+      if (path.endsWith('/issues-index.json')) {
+        return path.includes(replacement) ? json({ ...issueIndex, snapshotId: replacement }) : new Response(null, { status: 404 })
+      }
+      if (path.includes(replacement) && path.endsWith('/prs-index.json')) {
+        return json({ ...prIndex, snapshotId: replacement })
+      }
+    })
+    open('#/prs?module=clang-sema')
+    await screen.findByRole('button', { name: /#101/ })
+    const dialog = await openSearch()
+    const input = dialog.getByRole<HTMLInputElement>('textbox', { name: 'Search query' })
+    fireEvent.change(input, { target: { value: 'Sema' } })
+    const reload = await dialog.findByRole('button', { name: 'Load latest snapshot' })
+    expect(dialog.getByRole('button', { name: /PR #101/ })).toBeTruthy()
+    expect(dialog.queryByRole('button', { name: /Issue #202/ })).toBeNull()
+    expect(fetcher.mock.calls.filter(([url]) => url.endsWith('/prs-index.json'))).toHaveLength(1)
+    fireEvent.click(reload)
+    expect(await dialog.findByRole('button', { name: /Issue #202/ })).toBeTruthy()
+    expect(input.value).toBe('Sema')
+    expect(dialog.queryByRole('alert')).toBeNull()
+    expect(window.location.hash).toBe('#/prs?module=clang-sema')
+  })
+
+  it('opens a search result without filtering the workbench or restricting keyboard navigation', async () => {
+    mockFetch()
+    open('#/prs?module=clang-sema&queue=approved-follow-up')
+    const dialog = await openSearch()
+    fireEvent.change(dialog.getByRole('textbox', { name: 'Search query' }), { target: { value: '#101' } })
+    fireEvent.click(await dialog.findByRole('button', { name: /PR #101/ }))
+    expect(window.location.hash).toBe('#/prs?module=clang-sema&item=101')
+    expect(screen.queryByRole('dialog')).toBeNull()
+
+    const detail = within(screen.getByRole('region', { name: 'Pull request details' }))
+    expect(await detail.findByRole('heading', { name: pr101.title })).toBeTruthy()
+    fireEvent.keyDown(window, { key: 'j' })
+    expect(await detail.findByRole('heading', { name: pr104.title })).toBeTruthy()
+    fireEvent.click(detail.getByRole('button', { name: 'Close details' }))
+    expect(window.location.hash).toBe('#/prs?module=clang-sema')
+    fireEvent.keyDown(window, { key: 'k' })
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: /#101/ }))
+  })
+
+  it('shows one recovery action for an unavailable issue index', async () => {
+    mockFetch(path => path.endsWith('/issues-index.json') ? new Response(null, { status: 404 }) : undefined)
+    open('#/issues?module=clang-sema&item=202')
+    expect(await screen.findByRole('button', { name: 'Load latest snapshot' })).toBeTruthy()
+    expect(screen.getAllByRole('alert')).toHaveLength(1)
+    expect(screen.getByRole('alert').closest('.pane-list')).toBeNull()
+  })
+
+  it('labels a human-reported crash and only quotes empty or whitespace-containing compiler arguments', async () => {
+    mockFetch(path => {
+      if (path.endsWith('/issues-index.json')) return json({
+        ...issueIndex,
+        items: issueIndex.items.map(issue => issue.id === issue202.id ? { ...issue, source: 'human-reported' } : issue),
+      })
+      if (path.endsWith('/issue-202.json')) return json({
+        ...issue202, source: 'human-reported',
+        repro: { ...issue202.repro, compileArgs: ['-std=c++17', '-Ipath with spaces', '', '-DNAME=value'] },
+      })
+    })
+    open('#/issues?module=clang-sema&item=202')
+    const detail = within(await screen.findByRole('region', { name: 'Issue details' }))
+    expect(await detail.findByRole('heading', { name: 'Crash Signature' })).toBeTruthy()
+    expect(detail.queryByRole('heading', { name: 'Fuzzer Crash Signature' })).toBeNull()
+    expect(detail.getByText('-std=c++17', { selector: 'code' })).toBeTruthy()
+    expect(detail.getByText('"-Ipath with spaces"', { selector: 'code' })).toBeTruthy()
+    expect(detail.getByText('""', { selector: 'code' })).toBeTruthy()
   })
 
   it('shows diagnostics verbatim and copies the original reproducer and Markdown comment', async () => {

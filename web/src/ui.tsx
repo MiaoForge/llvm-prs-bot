@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { ExternalLink, X } from 'lucide-react'
-import { SnapshotError, type Summary } from './snapshot'
+import { isMissingSnapshotFile, type Summary } from './snapshot'
 import { nextItem } from './state'
 
 export function humanize(value: string) {
@@ -52,10 +52,17 @@ export function Loading({ children }: { children: ReactNode }) {
   </div>
 }
 
+export function FilteredSelection({ clearFilters }: { clearFilters: () => void }) {
+  return <div className="callout warn">
+    <p role="status">This item is still in this module but does not match the current filters.</p>
+    <div><button className="btn" onClick={clearFilters}>Clear filters</button></div>
+  </div>
+}
+
 export function LoadError({ error, reload, retry, busy = false }: {
   error: Error; reload?: () => void; retry?: () => void; busy?: boolean
 }) {
-  const expired = error instanceof SnapshotError && error.status === 404 && reload
+  const expired = isMissingSnapshotFile(error) && reload
   return <div className="state-message" role="alert">
     <p>{expired ? 'This file is unavailable in the current snapshot. Load the latest snapshot to continue.' : error.message}</p>
     {expired

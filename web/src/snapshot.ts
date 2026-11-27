@@ -17,6 +17,10 @@ export class SnapshotError extends Error {
   }
 }
 
+export function isMissingSnapshotFile(error: unknown) {
+  return error instanceof SnapshotError && error.status === 404
+}
+
 async function getJson(path: string, signal: AbortSignal, cache?: RequestCache) {
   const response = await fetch(path, { signal, cache })
   if (!response.ok) throw new SnapshotError(`Snapshot request failed (HTTP ${response.status}).`, response.status)
