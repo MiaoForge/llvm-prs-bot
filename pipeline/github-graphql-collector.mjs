@@ -56,6 +56,15 @@ query($query: String!, $first: Int!, $after: String) {
             comments(first: 1) { nodes { url } }
           }
         }
+        timelineItems(last: 5, itemTypes: [HEAD_REF_FORCE_PUSHED_EVENT]) {
+          nodes {
+            ... on HeadRefForcePushedEvent {
+              createdAt
+              actor { __typename login }
+              afterCommit { oid commitUrl }
+            }
+          }
+        }
         commits(last: 1) {
           totalCount
           nodes {
@@ -256,20 +265,30 @@ function convertGraphQLPull(node) {
       ]
     : []
   const files = (node.files?.nodes ?? []).map((file) => ({ filename: file.path }))
+  const pushes = (node.timelineItems?.nodes ?? [])
+    .filter((item) => item?.createdAt && item?.afterCommit?.oid)
+    .map((item) => ({
+      created_at: item.createdAt,
+      actor: toRestUser(item.actor),
+      after_commit: {
+        sha: item.afterCommit.oid,
+        html_url: item.afterCommit.commitUrl,
+      },
+    }))
   const normalized = normalizePull(restPull, {
     files,
     reviews,
     comments,
     commits,
-    pushes: [],
+    pushes,
     checks,
     requiredChecksComplete:
       checks.length > 0 && !headCommit?.statusCheckRollup?.contexts?.pageInfo?.hasNextPage,
     distance: {},
     reviewsComplete: !node.reviews?.pageInfo?.hasPreviousPage,
     commentsComplete: !node.comments?.pageInfo?.hasPreviousPage,
-    commitsComplete: (node.commits?.totalCount ?? 0) <= commits.length,
-    timelineComplete: false,
+    commitsComplete: Boolean(headCommit?.oid),
+    timelineComplete: true,
   })
   return {
     ...normalized,
@@ -386,26 +405,38 @@ export function createGitHubGraphQLCollector(options = {}) {
 
   return {
     async collect(githubSyncedAt) {
-      // 1. Targeted Clang/Lex + Clang frontend queries first, then broad whole-repo coverage.
+      const staleCutoff = new Date(Date.parse(githubSyncedAt) - 30 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 10)
+      // 1. Targeted Clang/Lex (both recent and >30d stale backlog) + Clang frontend,
+      // then broad whole-repo coverage.
       const prQueries = [
         [
           `repo:${repository} is:pr is:open (Lex OR Lexer OR Preprocessor OR clang/lib/Lex) sort:updated-desc`,
-          Math.min(100, maxPulls),
+          Math.min(60, maxPulls),
+        ],
+        [
+          `repo:${repository} is:pr is:open (Lex OR Lexer OR Preprocessor OR clang/lib/Lex) updated:<=${staleCutoff} sort:updated-asc`,
+          Math.min(60, maxPulls),
         ],
         [
           `repo:${repository} is:pr is:open label:"clang:frontend" sort:updated-desc`,
-          Math.min(150, maxPulls),
+          Math.min(100, maxPulls),
         ],
         [`repo:${repository} is:pr is:open sort:updated-desc`, maxPulls],
       ]
       const issueQueries = [
         [
           `repo:${repository} is:issue is:open label:"clang:frontend" (lex OR lexer OR preprocessor OR macro OR pragma OR "#include") sort:updated-desc`,
-          Math.min(100, maxIssues),
+          Math.min(60, maxIssues),
+        ],
+        [
+          `repo:${repository} is:issue is:open label:"clang:frontend" (lex OR lexer OR preprocessor OR macro OR pragma OR "#include") updated:<=${staleCutoff} sort:updated-asc`,
+          Math.min(60, maxIssues),
         ],
         [
           `repo:${repository} is:issue is:open label:"clang:frontend" sort:updated-desc`,
-          Math.min(150, maxIssues),
+          Math.min(100, maxIssues),
         ],
         [`repo:${repository} is:issue is:open sort:updated-desc`, maxIssues],
       ]

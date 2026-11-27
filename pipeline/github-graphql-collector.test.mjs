@@ -141,6 +141,8 @@ test('collects Clang/Lex and whole-repo PRs, issues, and reviewer history via ba
   })
   assert.ok(triaged.moduleIds.includes('clang-lex'))
   assert.equal(triaged.headCi.status, 'passing')
+  assert.equal(triaged.lastHumanActivityAt, '2026-11-20T00:00:00Z')
   assert.equal(triaged.suggestedReviewers[0]?.login, 'lex-maintainer')
   assert.ok(queries.some((q) => q.includes('clang/lib/Lex')))
+  assert.ok(queries.some((q) => q.includes('updated:<=2026-10-28')))
 })

@@ -192,14 +192,22 @@ export function normalizeIssue(issue, comments, githubSyncedAt) {
     (issue.body ?? '').match(
       /\b(?:clang\/(?:lib|include\/clang|test|unittests)|llvm|lld|mlir|lldb|libcxx|clang-tools-extra|compiler-rt|flang|bolt|libc|openmp)\/[A-Za-z0-9_./-]+/g,
     ) ?? []
-  // Recognize Clang/Lex issues from explicit lexer/preprocessor symbols or title tags
-  // when upstream issues carry only the umbrella clang:frontend label.
+  // Recognize Clang/Lex issues from explicit lexer/preprocessor symbols, title tags,
+  // or preprocessor/lexer terms when upstream issues carry the clang:frontend label.
   const lexHintText = `${issue.title ?? ''}\n${issue.body ?? ''}`
-  if (
-    !paths.some((p) => p.startsWith('clang/lib/Lex/')) &&
-    /(?:\[clang\]\[(?:Lex|Lexer|Preprocessor)\]|\[(?:Lex|Lexer|Preprocessor)\]|\b(?:Preprocessor::|Lexer::|TokenLexer|HeaderSearch|PPDirectives|PPMacroExpansion|DependencyDirectivesScanner)\b)/i.test(
+  const hasFrontendLabel = labels.some((label) => label.trim().toLowerCase() === 'clang:frontend')
+  const explicitLexMatch =
+    /(?:\[clang\]\[(?:Lex|Lexer|Preprocessor|PP)\]|\[(?:Lex|Lexer|Preprocessor|PP)\]|\b(?:Preprocessor::|Lexer::|TokenLexer|HeaderSearch|PPDirectives|PPMacroExpansion|DependencyDirectivesScanner|ModuleMap)\b)/i.test(
       lexHintText,
     )
+  const frontendLexTopic =
+    hasFrontendLabel &&
+    /(?:\b(?:preprocessor|lexer|lexing|macro expansion|token pasting|line splicing|trigraph|digraph|raw string literal|string literal|character literal|__has_include|__has_embed|__VA_OPT__|__VA_ARGS__)\b|#(?:include|pragma|define|embed|ifdef|ifndef|elif|line)\b)/i.test(
+      issue.title ?? '',
+    )
+  if (
+    !paths.some((p) => p.startsWith('clang/lib/Lex/')) &&
+    (explicitLexMatch || frontendLexTopic)
   ) {
     paths.push('clang/lib/Lex/')
   }
