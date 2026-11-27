@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 import Ajv2020 from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
+import { structuredEvidenceGaps } from "./issue-verification.mjs";
 
 const schemaDir = new URL("../schemas/", import.meta.url);
 const mockDir = fileURLToPath(new URL("../data/", import.meta.url));
@@ -49,7 +50,20 @@ function pickFields(object, fields) {
   return Object.fromEntries(fields.map((field) => [field, object[field]]));
 }
 
-function countItems(prs, issues) {
+export function indexRow(kind, detail) {
+  const fields = Object.keys(schemas.common.$defs[`${kind}ListFields`].properties);
+  return pickFields(detail, fields);
+}
+
+export function checkDocument(data, schemaName, path) {
+  const validate = validators[schemaName];
+  if (!validate(data)) {
+    throw new Error(`${path}: ${ajv.errorsText(validate.errors, { separator: "\n" })}`);
+  }
+  return data;
+}
+
+export function countItems(prs, issues) {
   const { prQueue, issueConclusion } = schemas.common.$defs;
   const prQueues = Object.fromEntries(prQueue.enum.map((queue) => [queue, 0]));
   const issueConclusions = Object.fromEntries(
@@ -96,40 +110,26 @@ function validateIssue(issue, path) {
     same(issue[side], preview, `${path}: ${side} preview and run disagree`);
   }
 
-  const hasRepro = Object.values(pickFields(issue.repro, [
-    "sourceCode", "compileArgs", "expectedBehavior",
-  ])).every((value) => value !== null);
   const baselineReproduced = issue.baseline?.outcome === "reported-symptom";
   const trunkOutcome = issue.trunk?.outcome;
-  const conclusive = hasRepro && baselineReproduced;
-  const missingSignature = issue.kind === "crash" && issue.source === "generated-by-fuzzer"
-    && issue.crashSignature === null;
+  const gaps = structuredEvidenceGaps(issue);
   const missing = issue.missingEvidence;
   if (issue.conclusion === "insufficient-evidence") {
     requireThat(missing.length > 0, `${path}: insufficient evidence requires a reason`);
-    for (const [absent, reason] of [
-      [issue.repro.sourceCode === null, "source-code"],
-      [issue.repro.compileArgs === null, "compile-arguments"],
-      [issue.repro.expectedBehavior === null, "expected-behavior"],
-      [issue.baseline === null, "baseline-run"],
-      [issue.baseline !== null && !baselineReproduced, "baseline-symptom"],
-      [issue.trunk === null, "trunk-run"],
-      [trunkOutcome === "unknown" || trunkOutcome === "different-behavior", "trunk-outcome"],
-      [missingSignature, "crash-signature"],
-    ]) {
-      const requirement = absent ? "include" : "exclude";
-      requireThat(absent === missing.includes(reason),
-        `${path}: missingEvidence must ${requirement} ${reason}`);
+    for (const reason of gaps) {
+      requireThat(missing.includes(reason), `${path}: missingEvidence must include ${reason}`);
     }
-    // Without a baseline run, the intended version may still be known.
-    requireThat(issue.baseline === null || !missing.includes("baseline-version"),
-      `${path}: missingEvidence must exclude baseline-version when a baseline run exists`);
+    for (const reason of missing) {
+      // Without a baseline run, the intended version may still be known.
+      if (reason === "other" || (reason === "baseline-version" && issue.baseline === null)) continue;
+      requireThat(gaps.includes(reason), `${path}: missingEvidence must exclude ${reason}`);
+    }
     return;
   }
   const expected = issue.conclusion === "close-candidate" ? "expected-behavior" : "reported-symptom";
-  requireThat(conclusive && trunkOutcome === expected,
+  requireThat(baselineReproduced && trunkOutcome === expected,
     `${path}: ${issue.conclusion} requires a reproducing baseline and ${expected} on trunk`);
-  requireThat(missing.length === 0 && !missingSignature,
+  requireThat(missing.length === 0 && gaps.length === 0,
     `${path}: a conclusive result requires complete evidence`);
   requireThat(issue.lastVerifiedAt !== null, `${path}: a conclusive result requires a verification time`);
 }
@@ -153,12 +153,9 @@ function checkDetailInventory(directory, referencedFiles) {
     `${directory}: unreferenced detail files: ${unreferenced.join(", ")}`);
 }
 
-function validateSnapshot(dir) {
+export function validateSnapshot(dir) {
   function checked(path, schemaName) {
-    const data = readJson(path);
-    const validate = validators[schemaName];
-    requireThat(validate(data), `${path}: ${ajv.errorsText(validate.errors, { separator: "\n" })}`);
-    return data;
+    return checkDocument(readJson(path), schemaName, path);
   }
 
   const summary = checked(join(dir, "summary.json"), "summary");
@@ -188,7 +185,6 @@ function validateSnapshot(dir) {
       const indexPath = `modules/${module.id}/${indexName}.json`;
       const index = checkedShard(indexPath, indexName);
       requireThat(index.moduleId === module.id, `${indexPath}: module ID mismatch`);
-      const indexFields = Object.keys(schemas.common.$defs[`${kind}ListFields`].properties);
       for (const row of index.items) {
         const context = `${indexPath}: item ${row.id}`;
         requireThat(!moduleItems[kind].has(row.id), `${context}: duplicate ID`);
@@ -203,7 +199,7 @@ function validateSnapshot(dir) {
           allItems[kind].set(row.id, { detail, indexedModules: [] });
         }
         const record = allItems[kind].get(row.id);
-        same(row, pickFields(record.detail, indexFields), `${context}: index and detail disagree`);
+        same(row, indexRow(kind, record.detail), `${context}: index and detail disagree`);
         record.indexedModules.push(module.id);
         moduleItems[kind].set(row.id, row);
       }
@@ -225,13 +221,15 @@ function validateSnapshot(dir) {
   return { snapshotId, modules: modules.size, ...kpis };
 }
 
-try {
-  requireThat(process.argv.length <= 3, "Usage: node validate-snapshot.mjs [data-directory]");
-  const result = validateSnapshot(process.argv[2] ?? mockDir);
-  console.log(`Validated ${result.snapshotId}: ${result.modules} modules, `
-    + `${result.prTotal} unique PRs, ${result.issueTotal} unique issues `
-    + `(${result.generatedByFuzzer} generated by fuzzer).`);
-} catch (error) {
-  console.error(error.message);
-  process.exitCode = 1;
+if (import.meta.main) {
+  try {
+    requireThat(process.argv.length <= 3, "Usage: node validate-snapshot.mjs [data-directory]");
+    const result = validateSnapshot(process.argv[2] ?? mockDir);
+    console.log(`Validated ${result.snapshotId}: ${result.modules} modules, `
+      + `${result.prTotal} unique PRs, ${result.issueTotal} unique issues `
+      + `(${result.generatedByFuzzer} generated by fuzzer).`);
+  } catch (error) {
+    console.error(error.message);
+    process.exitCode = 1;
+  }
 }

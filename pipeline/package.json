@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build:snapshot": "node build-snapshot.mjs",
     "validate": "node validate-snapshot.mjs",
     "test": "node --test"
   },
